@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+:root {
+  --theme-bg: #f4f5f7;
+  --theme-card: #ffffff;
+  --theme-text: #0f172a;
+  --theme-text-strong: #000000;
+  --theme-muted: #64748b;
+  --theme-border: rgba(0, 0, 0, 0.08);
+  --theme-shadow: rgba(0, 0, 0, 0.05);
+}
+
+:root.dark {
+  --theme-bg: #0b0c10;
+  --theme-card: #16181d;
+  --theme-text: #f8fafc;
+  --theme-text-strong: #ffffff;
+  --theme-muted: #8f95b2;
+  --theme-border: rgba(255, 255, 255, 0.05);
+  --theme-shadow: rgba(0, 0, 0, 0.4);
+}
+
+@theme {
+  --font-sans: 'Ranade', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --color-vs-bg: var(--theme-bg);
+  --color-vs-card: var(--theme-card);
+  --color-vs-text: var(--theme-text);
+  --color-vs-strong: var(--theme-text-strong);
+  --color-vs-muted: var(--theme-muted);
+  --color-vs-border: var(--theme-border);
+
+  --color-vs-primary: #ff3366;
+  --color-vs-success: #00e676;
+  --color-vs-warning: #ffb74d;
+  --color-vs-danger: #f03e3e;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Hide scrollbars globally but keep functionality */
+::-webkit-scrollbar {
+  display: none;
+}
+html, body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body {
+  @apply bg-vs-bg text-vs-text antialiased transition-colors duration-300;
+}
+
+.bento-card {
+  @apply rounded-2xl;
+  background-color: var(--theme-card);
+  box-shadow: 0 20px 25px -5px var(--theme-shadow);
+  border-top: 1px solid var(--theme-border);
+  border-left: 1px solid var(--theme-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
