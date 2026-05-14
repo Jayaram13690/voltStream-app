@@ -1,0 +1,25 @@
+from datetime import datetime
+
+from sqlalchemy import DateTime, Float, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database.session import Base
+
+
+class Billing(Base):
+    __tablename__ = "billing"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    current_bill: Mapped[float] = mapped_column(Float, nullable=False)
+    predicted_bill: Mapped[float] = mapped_column(Float, nullable=False)
+    budget_limit: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BillingTransaction(Base):
+    __tablename__ = "billing_transactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
