@@ -5,6 +5,7 @@ import { BillingPage } from "../pages/billing/BillingPage.jsx";
 import { DashboardPage } from "../pages/dashboard/DashboardPage.jsx";
 import { DevicesPage } from "../pages/devices/DevicesPage.jsx";
 import { SettingsPage } from "../pages/settings/SettingsPage.jsx";
+import { NotFoundPage } from "../pages/NotFoundPage.jsx";
 
 export function AppRoutes() {
   return (
@@ -16,6 +17,7 @@ export function AppRoutes() {
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
