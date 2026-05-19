@@ -8,8 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
 from app.core.config import get_settings
-from app.database.session import Base, SessionLocal, engine
-from app.services.seed import seed_if_empty
 from app.websocket.live_energy import hub
 
 
@@ -22,12 +20,6 @@ async def _broadcast_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        seed_if_empty(db)
-    finally:
-        db.close()
     task = asyncio.create_task(_broadcast_loop())
     yield
     task.cancel()

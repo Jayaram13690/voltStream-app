@@ -7,12 +7,15 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = "VoltStream API"
-    database_url: str = "sqlite:///./voltstream.db"
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = "*"
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        # Always include localhost:8080 for frontend access
+        if "http://localhost:8080" not in origins:
+            origins.append("http://localhost:8080")
+        return origins
 
 
 @lru_cache
