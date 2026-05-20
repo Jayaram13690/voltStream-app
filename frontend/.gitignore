@@ -3,3 +3,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+bucket-policy.json
+config.json

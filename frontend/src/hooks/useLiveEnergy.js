@@ -1,16 +1,16 @@
 import { useEffect, useRef } from "react";
-import { wsLiveEnergyUrl } from "../services/api.js";
+import { sseLiveEnergyUrl } from "../services/api.js";
 import { useDashboardStore } from "../store/dashboardStore.js";
 
 export function useLiveEnergy() {
   const setLive = useDashboardStore((s) => s.setLive);
-  const wsRef = useRef(null);
+  const eventSourceRef = useRef(null);
 
   useEffect(() => {
-    const url = wsLiveEnergyUrl();
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-    ws.onmessage = (ev) => {
+    const url = sseLiveEnergyUrl();
+    const eventSource = new EventSource(url);
+    eventSourceRef.current = eventSource;
+    eventSource.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
         setLive(data);
@@ -18,12 +18,12 @@ export function useLiveEnergy() {
         /* ignore */
       }
     };
-    const ping = window.setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.send("ping");
-    }, 30000);
+    eventSource.onerror = (error) => {
+      console.error("EventSource failed:", error);
+      eventSource.close();
+    };
     return () => {
-      window.clearInterval(ping);
-      ws.close();
+      eventSource.close();
     };
   }, [setLive]);
 }

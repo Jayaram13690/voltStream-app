@@ -7,13 +7,10 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-export function wsLiveEnergyUrl() {
+export function sseLiveEnergyUrl() {
   const configured = import.meta.env.VITE_API_URL?.trim();
   if (configured) {
-    const u = new URL("/ws/live-energy", configured);
-    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-    return u.toString();
+    return new URL("/api/v1/dashboard/live-stream", configured).toString();
   }
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${window.location.host}/ws/live-energy`;
+  return `${window.location.origin}/api/v1/dashboard/live-stream`;
 }
