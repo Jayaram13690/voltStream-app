@@ -34,8 +34,6 @@ def debug():
         "routes": [str(route.path) for route in app.routes]
     }
 
-
-
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
