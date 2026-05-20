@@ -4,6 +4,41 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .env
+package/*
 venv/
 .venv/
 *.db
+*.zip
+
+# Temporary files to ignore
+event.json
+response.json
+typing_extensions.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+*.pyd
+*.pyc
+
+# Tests
+*.py.test
+*.pyc
+__pycache__/
+.test

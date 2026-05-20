@@ -1,20 +1,19 @@
 import json
 import random
-
-from fastapi import WebSocket
+import time
 
 from app.schemas.dashboard import DashboardLive
 
 
 class LiveEnergyHub:
     def __init__(self) -> None:
-        self._connections: set[WebSocket] = set()
         self._state = DashboardLive(
             grid_usage=4.2,
             solar_generation=6.8,
             battery=82,
             savings=2340.0,
         )
+        self._last_updated = time.time()
 
     @property
     def state(self) -> DashboardLive:
@@ -26,27 +25,32 @@ class LiveEnergyHub:
         b = int(max(0, min(100, self._state.battery + random.randint(-1, 1))))
         sv = max(0.0, self._state.savings + random.uniform(-5, 12))
         self._state = DashboardLive(grid_usage=round(g, 2), solar_generation=round(s, 2), battery=b, savings=round(sv, 2))
+        self._last_updated = time.time()
         return self._state
 
-    async def connect(self, websocket: WebSocket) -> None:
-        await websocket.accept()
-        self._connections.add(websocket)
+    def generate_sse(self):
+        while True:
+            self.tick()
+            payload = json.dumps(self._state.model_dump(), default=str)
+            yield f"data: {payload}\n\n"
+            time.sleep(2)
 
-    def disconnect(self, websocket: WebSocket) -> None:
-        self._connections.discard(websocket)
-
-    async def broadcast_snapshot(self) -> None:
-        if not self._connections:
-            return
-        payload = json.dumps(self._state.model_dump(), default=str)
-        dead: list[WebSocket] = []
-        for ws in self._connections:
-            try:
-                await ws.send_text(payload)
-            except Exception:
-                dead.append(ws)
-        for ws in dead:
-            self.disconnect(ws)
+    def get_state(self, since: float = None, auto_tick: bool = True) -> dict:
+        """Get current state with optional change detection for polling"""
+        current_time = time.time()
+        
+        # Auto-tick if enabled (for polling mode)
+        if auto_tick:
+            self.tick()
+        
+        if since is not None and self._last_updated <= since:
+            return {"changed": False, "timestamp": current_time}
+        
+        return {
+            "changed": True,
+            "timestamp": current_time,
+            "data": self._state.model_dump()
+        }
 
 
 hub = LiveEnergyHub()
