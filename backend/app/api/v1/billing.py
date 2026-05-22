@@ -14,9 +14,9 @@ _billing_summary = {
 
 # Mock transactions
 _transactions = [
-    {"id": 1, "label": "May payment", "amount": -128.4, "paid_at": datetime.now() - timedelta(days=3)},
-    {"id": 2, "label": "April payment", "amount": -119.2, "paid_at": datetime.now() - timedelta(days=33)},
-    {"id": 3, "label": "March payment", "amount": -121.0, "paid_at": datetime.now() - timedelta(days=63)},
+    {"id": 1, "label": "May payment", "amount": 128.4, "paid_at": datetime.now() - timedelta(days=3)},
+    {"id": 2, "label": "April payment", "amount": 119.2, "paid_at": datetime.now() - timedelta(days=33)},
+    {"id": 3, "label": "March payment", "amount": 121.0, "paid_at": datetime.now() - timedelta(days=63)},
 ]
 
 
