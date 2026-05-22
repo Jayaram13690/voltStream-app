@@ -60,6 +60,7 @@ Compose injects `DATABASE_URL` for Postgres and widens `CORS_ORIGINS` for the st
 - `GET /api/v1/devices` and `PATCH /api/v1/devices/{id}` with JSON `{ "status": "on" | "off" }`
 - `GET /api/v1/billing/summary`
 - `WS /ws/live-energy` — JSON snapshots every ~2 seconds (send any text periodically to keep the handler responsive)
+<!-- SSE (Server-Sent Events) are not used in this project. The application uses WebSocket for real-time updates. -->
 
 ## Notes
 

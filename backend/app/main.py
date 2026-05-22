@@ -21,11 +21,16 @@ app.add_middleware(
 )
 app.include_router(api_router)
 
-# Add debug endpoints
+
 @app.get("/")
 def root():
     return {"message": "Root endpoint working"}
 
+@app.get("/voltstream-backend")
+async def voltstream_backend():
+    return {"message": "VoltStream backend route working"}
+
+# Add debug endpoints
 @app.get("/debug")
 def debug():
     return {

@@ -28,12 +28,13 @@ class LiveEnergyHub:
         self._last_updated = time.time()
         return self._state
 
-    def generate_sse(self):
-        while True:
-            self.tick()
-            payload = json.dumps(self._state.model_dump(), default=str)
-            yield f"data: {payload}\n\n"
-            time.sleep(2)
+    # def generate_sse(self):
+    #     # <!-- SSE (Server-Sent Events) are not used in this project. The application uses WebSocket for real-time updates. -->
+    #     while True:
+    #         self.tick()
+    #         payload = json.dumps(self._state.model_dump(), default=str)
+    #         yield f"data: {payload}\n\n"
+    #         time.sleep(2)
 
     def get_state(self, since: float = None, auto_tick: bool = True) -> dict:
         """Get current state with optional change detection for polling"""
