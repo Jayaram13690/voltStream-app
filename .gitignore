@@ -8,3 +8,5 @@ __pycache__/
 .pytest_cache/
 *.log
 *.md
+cf-config.json
+distributionConfig.json
