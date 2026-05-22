@@ -7,10 +7,10 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-export function sseLiveEnergyUrl() {
-  const configured = import.meta.env.VITE_API_URL?.trim();
-  if (configured) {
-    return new URL("/api/v1/dashboard/live-stream", configured).toString();
-  }
-  return `${window.location.origin}/api/v1/dashboard/live-stream`;
-}
+// export function sseLiveEnergyUrl() {
+//   const configured = import.meta.env.VITE_API_URL?.trim();
+//   if (configured) {
+//     return new URL("/api/v1/dashboard/live-stream", configured).toString();
+//   }
+//   return `${window.location.origin}/api/v1/dashboard/live-stream`;
+// }
