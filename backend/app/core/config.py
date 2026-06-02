@@ -8,6 +8,10 @@ class Settings(BaseSettings):
 
     app_name: str = "VoltStream API"
     cors_origins: str = "*"
+    
+    # AWS Bedrock Configuration
+    aws_region: str = "us-east-1"
+    bedrock_model_id: str = "amazon.nova-2-lite-v1:0"
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Activity, CreditCard, LayoutDashboard, Settings, SlidersHorizontal, Zap } from "lucide-react";
+import { Activity, CreditCard, LayoutDashboard, MessageCircle, Settings, SlidersHorizontal, Zap } from "lucide-react";
 import clsx from "clsx";
 
 const items = [
