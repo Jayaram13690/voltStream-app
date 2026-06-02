@@ -63,3 +63,70 @@ body {
   border-left: 1px solid var(--theme-border);
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
+
+/* Chat message formatting - compact spacing */
+.chat-message-content h1 {
+  @apply font-bold text-xl mt-2 mb-2;
+}
+
+.chat-message-content h2 {
+  @apply font-bold text-lg mt-2 mb-1.5;
+}
+
+.chat-message-content h3 {
+  @apply font-semibold mt-1.5 mb-1;
+}
+
+.chat-message-content h4 {
+  @apply font-medium mt-1.5 mb-1 text-vs-primary;
+}
+
+.chat-message-content strong {
+  @apply font-semibold;
+}
+
+.chat-message-content em {
+  @apply italic;
+}
+
+.chat-message-content ul {
+  @apply list-disc pl-4 mt-1.5 mb-2;
+}
+
+.chat-message-content ol {
+  @apply list-decimal pl-4 mt-1.5 mb-2;
+}
+
+.chat-message-content li {
+  @apply mb-0.5;
+}
+
+.chat-message-content hr {
+  @apply my-2.5 border-vs-border;
+}
+
+.chat-message-content pre {
+  @apply bg-gray-100 p-2 rounded mt-1.5 mb-1.5 overflow-x-auto text-sm;
+}
+
+.chat-message-content a {
+  @apply text-vs-primary hover:underline;
+}
+
+.chat-message-content p {
+  @apply mb-2;
+}
+
+.chat-message-content .flex {
+  @apply gap-2;
+}
+
+/* Reduce spacing for checkmark items */
+.chat-message-content .flex.items-start {
+  @apply mt-1 mb-1;
+}
+
+/* Dark mode adjustments for chat */
+.dark .chat-message-content pre {
+  @apply bg-gray-800 text-gray-200;
+}
