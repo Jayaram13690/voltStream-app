@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { MobileMenu } from "../components/layout/MobileMenu.jsx";
 import { Sidebar } from "../components/layout/Sidebar.jsx";
+import { ChatWidget } from "../components/chat/ChatWidget.jsx";
 
 export function MainLayout() {
   return (
@@ -12,6 +13,7 @@ export function MainLayout() {
         </main>
       </div>
       <MobileMenu />
+      <ChatWidget />
     </div>
   );
 }
