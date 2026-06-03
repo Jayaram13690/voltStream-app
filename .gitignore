@@ -2,6 +2,7 @@
 backend/venv/
 backend/.env
 backend/*.db
+backend/vector_db/chroma/*
 frontend/node_modules/
 frontend/dist/
 __pycache__/
@@ -9,7 +10,4 @@ __pycache__/
 *.log
 *.md
 cf-config.json
-distributionConfig.json"# Vector DB"  
-"vector_db/"  
-"*.sqlite3"  
-"*.bin" 
+distributionConfig.json
