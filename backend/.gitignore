@@ -42,3 +42,6 @@ dist/
 *.pyc
 __pycache__/
 .test
+
+app/vector_db/
+app/document/*.pdf
