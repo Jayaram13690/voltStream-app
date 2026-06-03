@@ -9,4 +9,7 @@ __pycache__/
 *.log
 *.md
 cf-config.json
-distributionConfig.json
+distributionConfig.json"# Vector DB"  
+"vector_db/"  
+"*.sqlite3"  
+"*.bin" 
