@@ -2,11 +2,12 @@ import { create } from 'zustand'
 import { api } from '../services/api'
 
 // Initialize with welcome message only once
-const initialMessages = []
+const initialChatMessages = []
+const initialRagMessages = []
 
 // Check if we need to add welcome message (only on first load)
-if (initialMessages.length === 0) {
-  initialMessages.push({
+if (initialChatMessages.length === 0) {
+  initialChatMessages.push({
     role: 'ai',
     content: "Hello! I'm VoltStream AI Assistant.\n" +
               "Ask me anything about:\n" +
@@ -19,22 +20,48 @@ if (initialMessages.length === 0) {
   })
 }
 
+if (initialRagMessages.length === 0) {
+  initialRagMessages.push({
+    role: 'ai',
+    content: "Hello! I'm your Document Assistant.\n" +
+              "I can answer questions from the indexed solar energy documents.\n" +
+              "Ask me about specific solar energy topics, technologies, or concepts.",
+    timestamp: new Date()
+  })
+}
+
 export const useChatStore = create((set, get) => ({
-  messages: initialMessages,
+  chatMessages: initialChatMessages,
+  ragMessages: initialRagMessages,
   isLoading: false,
   error: null,
   
-  addMessage: (role, content) => set(state => ({
-    messages: [...state.messages, { role, content, timestamp: new Date() }]
+  addChatMessage: (role, content) => set(state => ({
+    chatMessages: [...state.chatMessages, { role, content, timestamp: new Date() }]
   })),
   
-  sendMessage: async (question) => {
+  addRagMessage: (role, content, context = null) => set(state => ({
+    ragMessages: [...state.ragMessages, { role, content, timestamp: new Date(), context }]
+  })),
+  
+  sendMessage: async (question, mode = 'chat') => {
     set({ isLoading: true, error: null })
-    get().addMessage('user', question)
+    
+    if (mode === 'chat') {
+      get().addChatMessage('user', question)
+    } else {
+      get().addRagMessage('user', question)
+    }
     
     try {
-      const response = await api.post('/api/v1/chat', { question })
-      get().addMessage('ai', response.data.answer)
+      let response
+      if (mode === 'chat') {
+        response = await api.post('/api/v1/chat', { question })
+        get().addChatMessage('ai', response.data.answer)
+      } else {
+        response = await api.post('/api/v1/qa', { question })
+        get().addRagMessage('ai', response.data.answer, response.data.context_used || null)
+      }
     } catch (error) {
       set({ error: error.message })
     } finally {
@@ -42,5 +69,6 @@ export const useChatStore = create((set, get) => ({
     }
   },
   
-  clearChat: () => set({ messages: [] })
+  clearChat: () => set({ chatMessages: [] }),
+  clearRag: () => set({ ragMessages: [] })
 }))
