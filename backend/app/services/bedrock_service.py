@@ -5,6 +5,7 @@ for a demo chatbot application.
 """
 
 import os
+import json
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 from typing import Optional
@@ -51,58 +52,19 @@ class BedrockService:
     
     def generate_response(self, question: str) -> str:
         """
-        Generate a response using Amazon Nova Lite.
+        Generate response using prompt engineering for complete answers.
+        Uses structured prompts to ensure responses are well-formed and complete.
         """
 
         try:
             if not question or not question.strip():
                 raise ValueError("Question cannot be empty")
 
-            import json
-            request_body = {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "text": question
-                            }
-                        ]
-                    }
-                ],
-                "inferenceConfig": {
-                    "max_new_tokens": 2000,
-                    "temperature": 0.7,
-                    "top_p": 0.9
-                }
-            }
+            # Use prompt engineering to ensure complete responses
+            structured_prompt = self._build_structured_prompt(question)
 
-            response = self.client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(request_body),
-                contentType="application/json",
-                accept="application/json"
-            )
-
-            response_body = response["body"].read().decode("utf-8")
-            result = json.loads(response_body)
-
-            # Extract the text content safely
-            try:
-                text_content = result["output"]["message"]["content"][0]["text"]
-                # Log if response seems truncated
-                if len(text_content) >= 1900:  # Close to our token limit
-                    print(f"Warning: Response approaching token limit ({len(text_content)} characters)")
-                return text_content
-            except (KeyError, IndexError) as e:
-                # Fallback for different response formats
-                if "completion" in result:
-                    return result["completion"]
-                elif "outputText" in result:
-                    return result["outputText"]
-                else:
-                    print(f"Unexpected response format: {result}")
-                    return str(result)
+            response = self._generate_with_tokens(structured_prompt, 500)
+            return response
 
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -116,24 +78,104 @@ class BedrockService:
 
         except Exception as e:
             raise Exception(f"Failed to generate response: {str(e)}")
-                
-        except ClientError as e:
-            # Handle AWS service-specific errors
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            error_msg = e.response.get("Error", {}).get("Message", "AWS service error")
-            raise Exception(f"AWS Bedrock error ({error_code}): {error_msg}")
-            
-        except BotoCoreError as e:
-            # Handle AWS SDK core errors
-            raise Exception(f"AWS SDK error: {str(e)}")
-            
-        except json.JSONDecodeError as e:
-            # Handle JSON parsing errors
-            raise Exception(f"Failed to parse Bedrock response: {str(e)}")
-            
-        except Exception as e:
-            # Handle any other unexpected errors
-            raise Exception(f"Failed to generate response: {str(e)}")
+    
+    def _generate_with_tokens(self, prompt: str, token_limit: int) -> str:
+        """Generate response with specific token limit"""
+        request_body = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "inferenceConfig": {
+                "max_new_tokens": token_limit,
+                "temperature": 0.7,
+                "top_p": 0.9
+            }
+        }
+
+        response = self.client.invoke_model(
+            modelId=self.model_id,
+            body=json.dumps(request_body),
+            contentType="application/json",
+            accept="application/json"
+        )
+
+        result = json.loads(response["body"].read().decode("utf-8"))
+        
+        # Extract the text content safely
+        try:
+            return result["output"]["message"]["content"][0]["text"]
+        except (KeyError, IndexError):
+            # Fallback for different response formats
+            if "completion" in result:
+                return result["completion"]
+            elif "outputText" in result:
+                return result["outputText"]
+            else:
+                print(f"Unexpected response format: {result}")
+                return str(result)
+    
+    def _build_structured_prompt(self, question: str) -> str:
+        """Build a context-aware prompt that handles different question types appropriately"""
+        
+        # Detect question type and adjust prompt accordingly
+        question_lower = question.lower().strip()
+
+        # Handle greetings and simple conversations
+        if any(greeting in question_lower for greeting in ['hi', 'hello', 'hey', 'how are you']):
+            return f"""
+            You are VoltStream AI Assistant. The user greeted you with: '{question}'
+            Respond with a friendly greeting and briefly mention you can help with energy-related questions.
+            Keep the response warm and concise (under 50 words).
+            """
+
+        # Handle energy/solar specific questions
+        elif any(topic in question_lower for topic in ['energy', 'solar', 'power', 'electricity', 'renewable', 'sustainability', 'battery', 'grid']):
+            return f"""
+            You are VoltStream AI Assistant, an expert in energy, solar systems, and sustainability.
+            Provide a complete, well-structured answer to the following question.
+            Your response should:
+
+            1. Start with a clear, concise definition or explanation
+            2. Include 2-3 key points with examples where relevant
+            3. End with a summary sentence or conclusion
+            4. Use bullet points for lists
+            5. Keep the total response under 400 words
+
+            Question: {question}
+
+            Format your response as follows:
+            [Brief introduction]
+
+            Key points:
+            • Point 1 with brief explanation
+            • Point 2 with brief explanation
+            • Point 3 with brief explanation (if applicable)
+
+            [Concluding sentence that summarizes the main takeaway]
+            """
+
+        # Handle general questions
+        else:
+            return f"""
+            You are VoltStream AI Assistant, helpful AI assistant specializing in energy topics.
+            Answer the following general question concisely and helpfully.
+            If the question is unrelated to your expertise, politely mention your energy focus.
+
+            Question: {question}
+
+            Guidelines:
+            1. Be helpful and professional
+            2. Keep responses under 300 words
+            3. For non-energy questions, answer briefly then suggest energy-related topics
+            4. Always maintain a friendly, helpful tone
+            """
 
 
 def get_bedrock_service() -> BedrockService:
