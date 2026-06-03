@@ -3,7 +3,7 @@ import { Button } from "../ui/Button"
 import { Spinner } from "../ui/Spinner"
 import { useState } from "react"
 
-export function ChatInput({ onSubmit, isLoading, compact = false }) {
+export function ChatInput({ onSubmit, isLoading, compact = false, activeTab = "chat" }) {
   const [value, setValue] = useState('')
   
   const handleSubmit = (e) => {
@@ -20,7 +20,9 @@ export function ChatInput({ onSubmit, isLoading, compact = false }) {
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Type your message..."
+        placeholder={activeTab === "chat"
+          ? "Ask anything about energy, sustainability, or VoltStream..."
+          : "Ask questions from the uploaded knowledge base..."}
         className="flex-1"
         disabled={isLoading}
         onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}

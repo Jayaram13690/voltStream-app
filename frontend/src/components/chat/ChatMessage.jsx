@@ -1,6 +1,6 @@
 import clsx from "clsx";
 
-export function ChatMessage({ role, content, timestamp, compact = false }) {
+export function ChatMessage({ role, content, timestamp, compact = false, context = null, activeTab = "chat" }) {
   const isUser = role === 'user'
   
   // Format content with enhanced markdown support
@@ -80,6 +80,15 @@ export function ChatMessage({ role, content, timestamp, compact = false }) {
             compact ? "rounded-xl px-3 py-2 text-sm" : "rounded-2xl px-4 py-3",
             isUser ? (compact ? 'rounded-br-sm bg-vs-primary text-white' : 'rounded-br-none bg-vs-primary text-white') : (compact ? 'rounded-bl-sm bg-vs-card' : 'rounded-bl-none bg-vs-card')
           )}>
+            {!isUser && (
+              <div className="mb-2">
+                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                  activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
+                }`}>
+                  {activeTab === "chat" ? "General AI" : "Document Answer"}
+                </span>
+              </div>
+            )}
             <div 
               className={clsx("whitespace-pre-wrap break-words chat-message-content overflow-hidden", 
                 isUser ? "text-white" : "text-vs-text"
@@ -91,6 +100,11 @@ export function ChatMessage({ role, content, timestamp, compact = false }) {
                 isUser ? 'text-white/70' : 'text-vs-muted'
               )}>
                 {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+            {context && (
+              <div className="mt-2 border-t border-vs-border pt-2">
+                <RagContextViewer context={context} />
               </div>
             )}
           </div>

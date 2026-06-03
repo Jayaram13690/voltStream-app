@@ -10,7 +10,16 @@ import { MinimizedChat } from "./MinimizedChat";
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const { messages, isLoading, error, sendMessage } = useChatStore();
+  const [activeTab, setActiveTab] = useState("chat"); // 'chat' or 'rag'
+  const { 
+    chatMessages, 
+    ragMessages, 
+    isLoading, 
+    error, 
+    sendMessage 
+  } = useChatStore();
+  
+  const messages = activeTab === "chat" ? chatMessages : ragMessages;
   const chatContainerRef = useRef(null);
   
   // Auto-scroll to bottom
@@ -44,7 +53,7 @@ export function ChatWidget() {
   const handleSubmit = (e, question) => {
     e.preventDefault();
     if (question.trim() && !isLoading) {
-      sendMessage(question);
+      sendMessage(question, activeTab);
     }
   };
   
@@ -128,17 +137,54 @@ export function ChatWidget() {
           {isMinimized ? (
             <MinimizedChat onRestore={restoreChat} onClose={toggleChat} />
           ) : (
-            <div className="w-[400px] bg-vs-card rounded-2xl shadow-2xl border border-vs-border overflow-hidden max-h-[600px] flex flex-col">
-              <ChatHeader onMinimize={minimizeChat} onClose={toggleChat} />
-              <ChatMessageList 
-                messages={messages} 
-                isLoading={isLoading} 
-                error={error}
-                scrollContainerRef={chatContainerRef}
+            <div className="w-[400px] md:w-[500px] lg:w-[600px] h-[600px] md:h-[650px] lg:h-[700px] bg-vs-card rounded-2xl shadow-2xl border border-vs-border overflow-hidden flex flex-col">
+              <ChatHeader 
+                onMinimize={minimizeChat} 
+                onClose={toggleChat} 
+                activeTab={activeTab}
               />
+              <div className="px-4 py-2 bg-vs-primary/5 border-b border-vs-border">
+                <div className="flex p-1 bg-vs-primary/10 rounded-lg">
+                  <motion.button
+                    onClick={() => setActiveTab("chat")}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none ${
+                      activeTab === "chat"
+                        ? "bg-vs-primary text-white shadow-sm"
+                        : "bg-transparent text-vs-text hover:bg-vs-primary/10"
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  >
+                    AI Chat
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setActiveTab("rag")}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none ${
+                      activeTab === "rag"
+                        ? "bg-vs-primary text-white shadow-sm"
+                        : "bg-transparent text-vs-text hover:bg-vs-primary/10"
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  >
+                    RAG Assistant
+                  </motion.button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto" ref={chatContainerRef}>
+                <ChatMessageList 
+                  messages={messages} 
+                  isLoading={isLoading} 
+                  error={error}
+                  activeTab={activeTab}
+                />
+              </div>
               <ChatInputArea 
                 onSubmit={handleSubmit} 
                 isLoading={isLoading}
+                activeTab={activeTab}
               />
             </div>
           )}
