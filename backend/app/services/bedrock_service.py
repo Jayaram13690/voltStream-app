@@ -78,6 +78,10 @@ class BedrockService:
 
         except Exception as e:
             raise Exception(f"Failed to generate response: {str(e)}")
+
+    def generate_rag_response(self, rag_prompt: str) -> str:
+        """Generate response using RAG prompt without modification"""
+        return self._generate_with_tokens(rag_prompt, 1000)
     
     def _generate_with_tokens(self, prompt: str, token_limit: int) -> str:
         """Generate response with specific token limit"""
@@ -164,24 +168,21 @@ class BedrockService:
         # Handle general questions
         else:
             return f"""
-            You are VoltStream AI Assistant, helpful AI assistant specializing in energy topics.
+            You are VoltStream AI Assistant.
             Answer the following general question concisely and helpfully.
-            If the question is unrelated to your expertise, politely mention your energy focus.
 
             Question: {question}
 
             Guidelines:
             1. Be helpful and professional
             2. Keep responses under 300 words
-            3. For non-energy questions, answer briefly then suggest energy-related topics
-            4. Always maintain a friendly, helpful tone
+            3. Always maintain a friendly, helpful tone
             """
 
 
 def get_bedrock_service() -> BedrockService:
     """
     Factory function to create and return a BedrockService instance.
-    
     Returns:
         BedrockService: Initialized Bedrock service instance
     """
