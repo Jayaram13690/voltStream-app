@@ -40,8 +40,8 @@ export const useChatStore = create((set, get) => ({
     chatMessages: [...state.chatMessages, { role, content, timestamp: new Date() }]
   })),
   
-  addRagMessage: (role, content, context = null) => set(state => ({
-    ragMessages: [...state.ragMessages, { role, content, timestamp: new Date(), context }]
+  addRagMessage: (role, content) => set(state => ({
+    ragMessages: [...state.ragMessages, { role, content, timestamp: new Date() }]
   })),
   
   sendMessage: async (question, mode = 'chat') => {
@@ -60,10 +60,22 @@ export const useChatStore = create((set, get) => ({
         get().addChatMessage('ai', response.data.answer)
       } else {
         response = await api.post('/api/v1/qa', { question })
-        get().addRagMessage('ai', response.data.answer, response.data.context_used || null)
+        get().addRagMessage('ai', response.data.answer)
       }
     } catch (error) {
-      set({ error: error.message })
+      console.error('Chat error:', error)
+      let errorMessage = 'Failed to get response from the server'
+      if (error.response) {
+        // Server responded with a status code outside 2xx
+        errorMessage = error.response.data.detail || error.response.data.message || errorMessage
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check your connection.'
+      } else {
+        // Something happened in setting up the request
+        errorMessage = error.message || errorMessage
+      }
+      set({ error: errorMessage })
     } finally {
       set({ isLoading: false })
     }
