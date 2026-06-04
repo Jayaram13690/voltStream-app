@@ -15,7 +15,7 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
         >
           {messages.map((message, index) => (
             <motion.div
-              key={message.timestamp}
+              key={message.timestamp || index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -25,14 +25,20 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
                 ease: [0.4, 0, 0.2, 1]
               }}
             >
-              <ChatMessage 
-                role={message.role} 
-                content={message.content} 
-                timestamp={message.timestamp} 
-                context={message.context}
-                activeTab={activeTab}
-                compact={true}
-              />
+              {message.role && message.content && (
+                <ChatMessage 
+                  role={message.role} 
+                  content={message.content} 
+                  timestamp={message.timestamp}
+                  activeTab={activeTab}
+                  compact={true}
+                />
+              )}
+              {!message.role || !message.content ? (
+                <div className="text-vs-muted text-sm py-2 px-3 rounded-lg bg-vs-muted/10">
+                  Invalid message format
+                </div>
+              ) : null}
             </motion.div>
           ))}
         </motion.div>
@@ -70,9 +76,9 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-          className="text-vs-danger text-center py-2 text-sm"
+          className="text-vs-danger text-center py-2 text-sm bg-vs-danger/10 rounded-lg mx-2 my-1"
         >
-          {error}
+          ⚠️ {error}
         </motion.div>
       )}
       </AnimatePresence>

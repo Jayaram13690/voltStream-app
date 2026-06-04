@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { X, Minimize2 } from "lucide-react";
+import { X, Minimize2, RotateCcw } from "lucide-react";
 
-export function ChatHeader({ onMinimize, onClose, activeTab = "chat" }) {
+export function ChatHeader({ onMinimize, onClose, activeTab = "chat", onReset }) {
   return (
     <div className="bg-vs-primary text-white p-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -22,6 +22,18 @@ export function ChatHeader({ onMinimize, onClose, activeTab = "chat" }) {
         </div>
       </div>
       <div className="flex gap-2">
+        {onReset && (
+          <motion.button
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileTap={{ scale: 0.85, opacity: 0.9, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 600, damping: 20 }}
+            onClick={onReset}
+            className="p-1 rounded hover:bg-white/20 transition-colors"
+            aria-label="Reset chat"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </motion.button>
+        )}
         <motion.button
           whileHover={{ scale: 1.1, rotate: 5 }}
           whileTap={{ scale: 0.85, opacity: 0.9, rotate: 0 }}

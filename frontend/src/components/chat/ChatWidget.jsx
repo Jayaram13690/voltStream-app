@@ -16,11 +16,16 @@ export function ChatWidget() {
     ragMessages, 
     isLoading, 
     error, 
-    sendMessage 
+    sendMessage,
+    clearChat,
+    clearRag
   } = useChatStore();
   
   const messages = activeTab === "chat" ? chatMessages : ragMessages;
   const chatContainerRef = useRef(null);
+  
+  // Safety check for messages
+  const safeMessages = Array.isArray(messages) ? messages : [];
   
   // Auto-scroll to bottom
   useEffect(() => {
@@ -53,7 +58,20 @@ export function ChatWidget() {
   const handleSubmit = (e, question) => {
     e.preventDefault();
     if (question.trim() && !isLoading) {
-      sendMessage(question, activeTab);
+      try {
+        sendMessage(question, activeTab);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        // Set error state if needed
+      }
+    }
+  };
+  
+  const handleResetChat = () => {
+    if (activeTab === 'chat') {
+      clearChat();
+    } else {
+      clearRag();
     }
   };
   
@@ -142,6 +160,7 @@ export function ChatWidget() {
                 onMinimize={minimizeChat} 
                 onClose={toggleChat} 
                 activeTab={activeTab}
+                onReset={handleResetChat}
               />
               <div className="px-4 py-2 bg-vs-primary/5 border-b border-vs-border">
                 <div className="flex p-1 bg-vs-primary/10 rounded-lg">
@@ -175,7 +194,7 @@ export function ChatWidget() {
               </div>
               <div className="flex-1 overflow-y-auto" ref={chatContainerRef}>
                 <ChatMessageList 
-                  messages={messages} 
+                  messages={safeMessages} 
                   isLoading={isLoading} 
                   error={error}
                   activeTab={activeTab}
