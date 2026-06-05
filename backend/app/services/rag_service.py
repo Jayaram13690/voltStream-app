@@ -7,7 +7,7 @@ class RAGService:
         self.embedding_service = EmbeddingService()
         self.vector_store = VectorStoreService()
     
-    def retrieve_context(self, question: str, k: int = 5) -> str:
+    def retrieve_context(self, question: str, k: int = 3) -> str:
         """Retrieve and format context with confidence filtering"""
         question_embedding = self.embedding_service.generate_embedding(question)
         if not question_embedding:
