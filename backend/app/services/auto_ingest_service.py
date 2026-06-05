@@ -39,7 +39,7 @@ class AutoIngestService:
         stored_hash = self.get_stored_hash()
 
         if not current_hash:
-            print("Document not found")
+            print("DEBUG: Document not available for hash comparison - skipping auto-ingestion")
             return False
 
         if current_hash != stored_hash:
@@ -54,6 +54,7 @@ class AutoIngestService:
     def auto_ingest_if_changed(self):
         """Automatically ingest if document changed"""
         if not self.check_for_changes():
+            print("DEBUG: Document unchanged, skipping ingestion")
             return False
 
         print("Starting automatic ingestion...")
@@ -61,19 +62,35 @@ class AutoIngestService:
             # Load and split PDF
             pdf_service = PDFService(self.pdf_path)
             documents = pdf_service.load_pdf()
+            print(f"DEBUG: Loaded {len(documents)} document pages")
+            
             chunks = pdf_service.split_text(documents, chunk_size=750, chunk_overlap=150)
+            print(f"DEBUG: Split into {len(chunks)} chunks")
 
             # Generate embeddings
             embedding_service = EmbeddingService()
             embeddings = []
-            for chunk in chunks:
+            embedding_failures = 0
+            for i, chunk in enumerate(chunks):
                 embedding = embedding_service.generate_embedding(chunk.page_content)
                 if embedding:
                     embeddings.append(embedding)
+                else:
+                    embedding_failures += 1
+                    print(f"DEBUG: Failed to generate embedding for chunk {i+1}")
+
+            print(f"DEBUG: Generated {len(embeddings)} embeddings ({embedding_failures} failures)")
 
             # Store in ChromaDB
             vector_store = VectorStoreService()
             vector_store.add_documents(chunks, embeddings)
+            
+            # Verify collection
+            try:
+                collection_count = vector_store.collection.count()
+                print(f"DEBUG: Collection now has {collection_count} documents")
+            except Exception as e:
+                print(f"DEBUG: Could not verify collection count: {e}")
 
             # Update hash file
             self.store_hash(self.get_current_hash())
@@ -83,4 +100,6 @@ class AutoIngestService:
 
         except Exception as e:
             print(f"Auto-ingestion failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False

@@ -54,8 +54,16 @@ class VectorStoreService:
                 ids=ids
             )
     
-    def search(self, query: str, k: int = 5, query_embedding: List[float] = None) -> List[Dict[str, Any]]:
+    def search(self, query: str, k: int = 5, query_embedding: List[float] = None, confidence_threshold: float = 0.7) -> List[Dict[str, Any]]:
         """Search for similar documents with confidence threshold"""
+        
+        # Debug: Check collection status
+        try:
+            collection_count = self.collection.count()
+            print(f"DEBUG: Collection has {collection_count} documents")
+        except Exception as e:
+            print(f"DEBUG: Error checking collection count: {e}")
+        
         if query_embedding:
             # Use pre-computed embedding with distances
             results = self.collection.query(
@@ -73,13 +81,30 @@ class VectorStoreService:
         
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
-        return [
-                {
+        distances = results.get("distances", [[]])[0]
+        
+        print(f"DEBUG: Raw retrieval results - {len(documents)} documents found")
+        
+        # Filter results based on confidence threshold
+        # Convert distances to similarity scores (lower distance = higher similarity)
+        filtered_results = []
+        for doc, meta, distance in zip(documents, metadatas, distances):
+            # Convert distance to similarity score (simple inverse relationship)
+            # Distance range is typically 0-2 for cosine similarity in ChromaDB
+            similarity_score = max(0, 1 - distance/2)  # Normalize to 0-1 range
+            
+            print(f"DEBUG: Document similarity: {similarity_score:.3f}, distance: {distance:.3f}, threshold: {confidence_threshold:.3f}")
+            
+            if similarity_score >= confidence_threshold:
+                filtered_results.append({
                     "content": doc,
-                    "metadata": meta if meta else {}
-                }
-                for doc, meta in zip(documents, metadatas)
-            ]
+                    "metadata": meta if meta else {},
+                    "distance": distance,
+                    "similarity_score": similarity_score
+                })
+        
+        print(f"DEBUG: After filtering - {len(filtered_results)} documents pass threshold")
+        return filtered_results
     
     def persist(self):
         """Persist the database to disk"""
