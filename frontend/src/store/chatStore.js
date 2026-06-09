@@ -36,12 +36,12 @@ export const useChatStore = create((set, get) => ({
   isLoading: false,
   error: null,
   
-  addChatMessage: (role, content) => set(state => ({
-    chatMessages: [...state.chatMessages, { role, content, timestamp: new Date() }]
+  addChatMessage: (role, content, mode = 'normal') => set(state => ({
+    chatMessages: [...state.chatMessages, { role, content, timestamp: new Date(), mode }]
   })),
   
-  addRagMessage: (role, content) => set(state => ({
-    ragMessages: [...state.ragMessages, { role, content, timestamp: new Date() }]
+  addRagMessage: (role, content, mode = 'normal') => set(state => ({
+    ragMessages: [...state.ragMessages, { role, content, timestamp: new Date(), mode }]
   })),
   
   sendMessage: async (question, tab = 'chat', mode = 'normal') => {
@@ -49,9 +49,9 @@ export const useChatStore = create((set, get) => ({
     
     // Add user message to appropriate tab
     if (tab === 'chat') {
-      get().addChatMessage('user', question)
+      get().addChatMessage('user', question, mode)
     } else {
-      get().addRagMessage('user', question)
+      get().addRagMessage('user', question, mode)
     }
     
     try {
@@ -81,9 +81,9 @@ export const useChatStore = create((set, get) => ({
         : response.data.answer
       
       if (tab === 'chat') {
-        get().addChatMessage('ai', answer)
+        get().addChatMessage('ai', answer, mode)
       } else {
-        get().addRagMessage('ai', answer)
+        get().addRagMessage('ai', answer, mode)
       }
       
       // If this was an agent operation, trigger a device data refresh

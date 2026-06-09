@@ -5,18 +5,26 @@ import { forwardRef } from "react";
 export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeTab = "chat", mode = "normal" }, ref) => {
   return (
     <div className="p-3 space-y-2">
-      <AnimatePresence mode="popLayout">
-        {messages.map((message, index) => (
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={`${activeTab}-messages`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+        >
+          {messages.map((message, index) => (
           <motion.div
             key={message.timestamp || index}
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            initial={{ opacity: 0, y: 15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.98, position: "absolute", width: "100%" }}
+            exit={{ opacity: 0, y: -15, scale: 0.95, position: "absolute", width: "100%" }}
             transition={{
               type: "spring",
-              stiffness: 500,
-              damping: 30,
-              mass: 0.8
+              stiffness: 250,
+              damping: 45,
+              mass: 1.1,
+              duration: 0.7
             }}
             layout
           >
@@ -26,7 +34,7 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
                 content={message.content} 
                 timestamp={message.timestamp}
                 activeTab={activeTab}
-                mode={mode}
+                mode={message.mode || mode}
                 compact={true}
               />
             )}
@@ -37,13 +45,14 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
             ) : null}
           </motion.div>
         ))}
+        </motion.div>
         {isLoading && (
         <motion.div
           key="loading"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
+          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1.0 }}
           className="flex items-center gap-2 text-vs-muted"
         >
           <span className="text-sm">
@@ -70,9 +79,9 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
       )}
       {error && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1.0 }}
           className="text-vs-danger text-center py-2 text-sm bg-vs-danger/10 rounded-lg mx-2 my-1"
         >
           ⚠️ {error}

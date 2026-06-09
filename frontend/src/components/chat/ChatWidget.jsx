@@ -78,6 +78,8 @@ export function ChatWidget() {
   const handleModeChange = (newMode) => {
     try {
       console.log('Changing mode to:', newMode);
+      // Clear any existing notification first
+      setModeNotification(null);
       setMode(newMode);
       setModeNotification(newMode);
       // Auto-dismiss notification after 5 seconds
@@ -194,9 +196,8 @@ export function ChatWidget() {
                         ? "bg-vs-primary text-white shadow-sm"
                         : "bg-transparent text-vs-text hover:bg-vs-primary/10"
                     }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    whileHover={{ scale: 1.02, transition: { type: "spring", stiffness: 300, damping: 30 } }}
+                    whileTap={{ scale: 0.98, transition: { type: "spring", stiffness: 300, damping: 25 } }}
                   >
                     AI Chat
                   </motion.button>
@@ -207,9 +208,8 @@ export function ChatWidget() {
                         ? "bg-vs-primary text-white shadow-sm"
                         : "bg-transparent text-vs-text hover:bg-vs-primary/10"
                     }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    whileHover={{ scale: 1.02, transition: { type: "spring", stiffness: 300, damping: 30 } }}
+                    whileTap={{ scale: 0.98, transition: { type: "spring", stiffness: 300, damping: 25 } }}
                   >
                     RAG Assistant
                   </motion.button>

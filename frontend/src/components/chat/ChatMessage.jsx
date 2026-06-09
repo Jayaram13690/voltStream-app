@@ -159,13 +159,8 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
                   <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                     activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                   }`}>
-                    {activeTab === "chat" ? "General AI" : "Document Answer"}
+                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : "Generative AI") : "Document Answer"}
                   </span>
-                  {mode === 'agent' && (
-                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      🤖 Device Agent
-                    </span>
-                  )}
                   {mode === 'agent' && content && content.toLowerCase().includes('turned') && (
                     <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 animate-pulse">
                       ✅ Updated
@@ -216,13 +211,8 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
                   <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                     activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                   }`}>
-                    {activeTab === "chat" ? "General AI" : "Document Answer"}
+                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : "Generative AI") : "Document Answer"}
                   </span>
-                  {mode === 'agent' && (
-                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      🤖 Device Agent
-                    </span>
-                  )}
                   {mode === 'agent' && content && content.toLowerCase().includes('turned') && (
                     <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 animate-pulse">
                       ✅ Updated
