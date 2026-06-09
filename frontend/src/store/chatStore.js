@@ -44,10 +44,11 @@ export const useChatStore = create((set, get) => ({
     ragMessages: [...state.ragMessages, { role, content, timestamp: new Date() }]
   })),
   
-  sendMessage: async (question, mode = 'chat') => {
+  sendMessage: async (question, tab = 'chat', mode = 'normal') => {
     set({ isLoading: true, error: null })
     
-    if (mode === 'chat') {
+    // Add user message to appropriate tab
+    if (tab === 'chat') {
       get().addChatMessage('user', question)
     } else {
       get().addRagMessage('user', question)
@@ -55,13 +56,45 @@ export const useChatStore = create((set, get) => ({
     
     try {
       let response
-      if (mode === 'chat') {
-        response = await api.post('/api/v1/chat', { question })
-        get().addChatMessage('ai', response.data.answer)
+      let endpoint, requestBody
+      
+      // Determine endpoint and request format based on mode
+      if (mode === 'agent') {
+        // Device Control Agent endpoint
+        endpoint = '/api/v1/agent'
+        requestBody = { message: question }
+      } else if (tab === 'chat') {
+        // General chat endpoint
+        endpoint = '/api/v1/chat'
+        requestBody = { question }
       } else {
-        response = await api.post('/api/v1/qa', { question })
-        get().addRagMessage('ai', response.data.answer)
+        // RAG endpoint
+        endpoint = '/api/v1/qa'
+        requestBody = { question }
       }
+      
+      response = await api.post(endpoint, requestBody)
+      
+      // Add AI response to appropriate tab
+      const answer = mode === 'agent' 
+        ? response.data.response 
+        : response.data.answer
+      
+      if (tab === 'chat') {
+        get().addChatMessage('ai', answer)
+      } else {
+        get().addRagMessage('ai', answer)
+      }
+      
+      // If this was an agent operation, trigger a device data refresh
+      if (mode === 'agent') {
+        // Dispatch event to notify other components about device changes
+        const event = new CustomEvent('deviceStatusUpdated', {
+          detail: { timestamp: new Date().toISOString() }
+        })
+        window.dispatchEvent(event)
+      }
+      
     } catch (error) {
       console.error('Chat error:', error)
       let errorMessage = 'Failed to get response from the server'

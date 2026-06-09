@@ -31,6 +31,28 @@ export function DevicesPage() {
     };
   }, [setDevices]);
 
+  // Listen for device status updates from agent operations
+  useEffect(() => {
+    const handleDeviceUpdate = () => {
+      // Refresh devices when agent updates device status
+      (async () => {
+        try {
+          const res = await api.get("/api/v1/devices");
+          setDevices(res.data);
+          // No toast - using inline notification in chat
+        } catch {
+          console.error("Failed to refresh device status");
+          // Silent error handling
+        }
+      })();
+    };
+
+    window.addEventListener('deviceStatusUpdated', handleDeviceUpdate);
+    return () => {
+      window.removeEventListener('deviceStatusUpdated', handleDeviceUpdate);
+    };
+  }, [setDevices]);
+
   async function onToggle(device, nextOn) {
     setBusyId(device.id);
     try {

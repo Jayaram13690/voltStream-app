@@ -6,11 +6,14 @@ import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInputArea } from "./ChatInputArea";
 import { MinimizedChat } from "./MinimizedChat";
+import { ModeChangeNotification } from "./ModeChangeNotification";
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState("chat"); // 'chat' or 'rag'
+  const [mode, setMode] = useState("normal"); // 'normal' or 'agent'
+  const [modeNotification, setModeNotification] = useState(null); // Mode change notification
   const { 
     chatMessages, 
     ragMessages, 
@@ -59,11 +62,26 @@ export function ChatWidget() {
     e.preventDefault();
     if (question.trim() && !isLoading) {
       try {
-        sendMessage(question, activeTab);
+        sendMessage(question, activeTab, mode);
       } catch (error) {
         console.error('Error sending message:', error);
         // Set error state if needed
       }
+    }
+  };
+
+  const handleModeChange = (newMode) => {
+    try {
+      console.log('Changing mode to:', newMode);
+      setMode(newMode);
+      setModeNotification(newMode);
+      // Auto-dismiss notification after 5 seconds
+      setTimeout(() => {
+        console.log('Dismissing mode notification');
+        setModeNotification(null);
+      }, 5000);
+    } catch (error) {
+      console.error('Error in handleModeChange:', error);
     }
   };
   
@@ -193,17 +211,35 @@ export function ChatWidget() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto" ref={chatContainerRef}>
+                {modeNotification && (
+                  <AnimatePresence>
+                    <motion.div
+                      key="mode-notification"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                    >
+                      <ModeChangeNotification 
+                        mode={modeNotification}
+                        onDismiss={() => setModeNotification(null)}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                )}
                 <ChatMessageList 
                   messages={safeMessages} 
                   isLoading={isLoading} 
                   error={error}
                   activeTab={activeTab}
+                  mode={mode}
                 />
               </div>
               <ChatInputArea 
                 onSubmit={handleSubmit} 
                 isLoading={isLoading}
                 activeTab={activeTab}
+                mode={mode}
+                onModeChange={handleModeChange}
               />
             </div>
           )}

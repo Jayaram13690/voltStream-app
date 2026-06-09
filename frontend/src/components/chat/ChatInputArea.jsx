@@ -1,6 +1,6 @@
 import { ChatInput } from "./ChatInput";
 
-export function ChatInputArea({ onSubmit, isLoading, activeTab = "chat" }) {
+export function ChatInputArea({ onSubmit, isLoading, activeTab = "chat", mode = "normal", onModeChange }) {
   return (
     <div className="p-3 border-t border-vs-border bg-vs-bg">
       <ChatInput 
@@ -8,6 +8,8 @@ export function ChatInputArea({ onSubmit, isLoading, activeTab = "chat" }) {
         isLoading={isLoading}
         compact={true}
         activeTab={activeTab}
+        mode={mode}
+        onModeChange={onModeChange}
       />
     </div>
   );

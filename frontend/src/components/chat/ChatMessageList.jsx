@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChatMessage } from "./ChatMessage";
 import { forwardRef } from "react";
 
-export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeTab = "chat" }, ref) => {
+export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeTab = "chat", mode = "normal" }, ref) => {
   return (
     <div className="p-3 space-y-2">
       <AnimatePresence mode="wait">
@@ -31,6 +31,7 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
                   content={message.content} 
                   timestamp={message.timestamp}
                   activeTab={activeTab}
+                  mode={mode}
                   compact={true}
                 />
               )}
@@ -52,7 +53,9 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
           className="flex items-center gap-2 text-vs-muted"
         >
           <span className="text-sm">
-            {activeTab === "chat" ? "Thinking..." : "Searching documents..."}
+            {activeTab === "chat" 
+              ? (mode === "agent" ? "Controlling device" : "Thinking")
+              : "Searching documents"}
           </span>
           <motion.span
             className="w-2 h-2 bg-vs-primary rounded-full"

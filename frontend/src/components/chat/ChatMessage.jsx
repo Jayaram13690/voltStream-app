@@ -59,7 +59,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-export function ChatMessage({ role, content, timestamp, compact = false, activeTab = "chat" }) {
+export function ChatMessage({ role, content, timestamp, compact = false, activeTab = "chat", mode = "normal" }) {
   const isUser = role === 'user'
   
   // Format content with enhanced markdown support
@@ -155,12 +155,22 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
               isUser ? (compact ? 'rounded-br-sm bg-vs-primary text-white' : 'rounded-br-none bg-vs-primary text-white') : (compact ? 'rounded-bl-sm bg-vs-card' : 'rounded-bl-none bg-vs-card')
             )}>
               {!isUser && (
-                <div className="mb-2">
+                <div className="mb-2 flex items-center gap-2">
                   <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                     activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                   }`}>
                     {activeTab === "chat" ? "General AI" : "Document Answer"}
                   </span>
+                  {mode === 'agent' && (
+                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      🤖 Device Agent
+                    </span>
+                  )}
+                  {mode === 'agent' && content && content.toLowerCase().includes('turned') && (
+                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 animate-pulse">
+                      ✅ Updated
+                    </span>
+                  )}
                 </div>
               )}
               <div className={clsx("whitespace-pre-wrap break-words chat-message-content overflow-hidden", 
@@ -202,12 +212,22 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
               isUser ? (compact ? 'rounded-br-sm bg-vs-primary text-white' : 'rounded-br-none bg-vs-primary text-white') : (compact ? 'rounded-bl-sm bg-vs-card' : 'rounded-bl-none bg-vs-card')
             )}>
               {!isUser && (
-                <div className="mb-2">
+                <div className="mb-2 flex items-center gap-2">
                   <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                     activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                   }`}>
                     {activeTab === "chat" ? "General AI" : "Document Answer"}
                   </span>
+                  {mode === 'agent' && (
+                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      🤖 Device Agent
+                    </span>
+                  )}
+                  {mode === 'agent' && content && content.toLowerCase().includes('turned') && (
+                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 animate-pulse">
+                      ✅ Updated
+                    </span>
+                  )}
                 </div>
               )}
               <div 
