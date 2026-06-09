@@ -1,8 +1,11 @@
 """
 Device Control Agent Package.
 
-This package contains the Device Control Agent implementation using Strands Agents SDK
-and Amazon Bedrock Nova Lite model.
+This package contains the Device Control Agent implementation using Strands
+Agents SDK and Amazon Bedrock Nova 2 Lite model.
+
+90 % agentic: all intent, tool-selection, and workflow decisions are made
+by Nova Lite. Python only orchestrates SDK initialization and memory.
 """
 
 from .agent_service import DeviceControlAgent, get_device_agent
