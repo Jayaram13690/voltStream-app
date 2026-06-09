@@ -10,8 +10,9 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
     
     # AWS Bedrock Configuration
-    aws_region: str = "us-east-1"
-    bedrock_model_id: str = "global.amazon.nova-2-lite-v1:0"
+    aws_region: str  # Load from AWS_REGION environment variable
+    bedrock_model_id: str  # Load from BEDROCK_MODEL_ID environment variable
+    bedrock_for_config: str  # Load from BEDROCK_FOR_CONFIG environment variable
 
     @property
     def cors_origin_list(self) -> list[str]:
