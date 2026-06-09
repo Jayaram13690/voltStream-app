@@ -5,44 +5,38 @@ import { forwardRef } from "react";
 export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeTab = "chat", mode = "normal" }, ref) => {
   return (
     <div className="p-3 space-y-2">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`${activeTab}-messages`}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        >
-          {messages.map((message, index) => (
-            <motion.div
-              key={message.timestamp || index}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{
-                delay: index * 0.05, 
-                duration: 0.4,
-                ease: [0.4, 0, 0.2, 1]
-              }}
-            >
-              {message.role && message.content && (
-                <ChatMessage 
-                  role={message.role} 
-                  content={message.content} 
-                  timestamp={message.timestamp}
-                  activeTab={activeTab}
-                  mode={mode}
-                  compact={true}
-                />
-              )}
-              {!message.role || !message.content ? (
-                <div className="text-vs-muted text-sm py-2 px-3 rounded-lg bg-vs-muted/10">
-                  Invalid message format
-                </div>
-              ) : null}
-            </motion.div>
-          ))}
-        </motion.div>
+      <AnimatePresence mode="popLayout">
+        {messages.map((message, index) => (
+          <motion.div
+            key={message.timestamp || index}
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98, position: "absolute", width: "100%" }}
+            transition={{
+              type: "spring",
+              stiffness: 500,
+              damping: 30,
+              mass: 0.8
+            }}
+            layout
+          >
+            {message.role && message.content && (
+              <ChatMessage 
+                role={message.role} 
+                content={message.content} 
+                timestamp={message.timestamp}
+                activeTab={activeTab}
+                mode={mode}
+                compact={true}
+              />
+            )}
+            {!message.role || !message.content ? (
+              <div className="text-vs-muted text-sm py-2 px-3 rounded-lg bg-vs-muted/10">
+                Invalid message format
+              </div>
+            ) : null}
+          </motion.div>
+        ))}
         {isLoading && (
         <motion.div
           key="loading"

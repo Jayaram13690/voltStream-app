@@ -33,13 +33,18 @@ export function ChatWidget() {
   // Auto-scroll to bottom
   useEffect(() => {
     if (isOpen && !isMinimized && chatContainerRef.current) {
-      // Use setTimeout to ensure DOM is updated before scrolling
-      const timer = setTimeout(() => {
-        chatContainerRef.current.scrollTo({ 
-          top: chatContainerRef.current.scrollHeight, 
-          behavior: 'smooth' 
+      // Use requestAnimationFrame for smoother scrolling
+      const scrollToBottom = () => {
+        requestAnimationFrame(() => {
+          chatContainerRef.current.scrollTo({ 
+            top: chatContainerRef.current.scrollHeight, 
+            behavior: 'instant' 
+          });
         });
-      }, 100);
+      };
+      
+      // Small delay to allow animations to start
+      const timer = setTimeout(scrollToBottom, 50);
       
       return () => clearTimeout(timer);
     }
