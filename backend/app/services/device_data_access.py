@@ -17,8 +17,8 @@ _DEVICE_TEMPLATE = [
     {"id": 4, "name": "HVAC", "status": "on", "power_usage": 1.4},
     {"id": 5, "name": "Water heater", "status": "off", "power_usage": 0.0},
     {"id": 6, "name": "Solar inverter", "status": "on", "power_usage": 0.2},
-    {"id": 101, "name": "Dishwasher", "status": "online", "power_usage": 1.5},
-    {"id": 102, "name": "Fan", "status": "offline", "power_usage": 0.0},
+    {"id": 101, "name": "Dishwasher", "status": "on", "power_usage": 1.5},
+    {"id": 102, "name": "Fan", "status": "off", "power_usage": 0.0},
 ]
 
 # Initialize devices with proper timestamps
