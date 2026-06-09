@@ -1,41 +1,102 @@
 """
-Device Control Agent Service using Strands Agents SDK and Amazon Bedrock Nova Lite.
+Device Control Agent Service — 90% Agentic Architecture.
 
-This service implements a Single-Agent architecture using the ReAct (Reason + Act) pattern
-for controlling devices through natural language requests.
+Powered by:
+  * Amazon Bedrock  Nova 2 Lite  (us.amazon.nova-2-lite-v1:0)
+  * Strands Agents SDK 0.3.0
+  * ReAct  (Reason -> Tool Call -> Observe -> Reason -> ... -> Respond)
 
-Uses Strands Agents SDK version 0.3.0 with proper Agent and tool integration.
+Decision-making that is now handled entirely by Nova Lite (not Python):
+  - Intent classification
+  - Target device discovery & name->id resolution
+  - Workflow sequencing  (which tool, in what order)
+  - Multi-device bulk operations via update_multiple_devices
+  - Pronoun / context resolution from conversation memory
+  - Error recovery reasoning
+
+The only Python logic that remains:
+  - Conversation memory appending
+  - Strands Agent initialisation
+  - HTTP error propagation
 """
 
-import json
 import logging
-from typing import Dict, Any, List, Callable
-
 from datetime import datetime
+from typing import Any, Dict, List
 
 import boto3
+from botocore.config import Config as BotoCoreConfig
 from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import BaseModel
+from strands import Agent
+from strands.models.bedrock import BedrockModel
 
+from app.agent.tools.device_tools import (
+    get_device_status_tool,
+    list_devices_tool,
+    set_device_status_tool,
+    update_multiple_devices_tool,
+)
 from app.core.config import get_settings
-from app.schemas.device import DeviceRead, DeviceUpdate
 
-# Configure logging
+# ─────────────────────────────────────────────
+# Logging
+# ─────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Import device data from shared access module
-from app.services.device_data_access import get_devices, get_default_power
+# ─────────────────────────────────────────────
+# System prompt — drives 90% agentic behavior
+# ─────────────────────────────────────────────
+SYSTEM_PROMPT = """You are an intelligent Device Control Agent with full autonomy over smart-home devices.
 
-# Get device data access functions (don't store local copies)
-_DEFAULT_POWER = get_default_power()
+## Your Responsibilities
+You MUST autonomously decide:
+1. Which tools to call — never ask the user to confirm tool usage.
+2. In what order — plan a multi-step workflow before acting.
+3. Which devices are targeted — always call list_devices first if you are unsure of a device's id, even if the user gives a name.
+4. When to use bulk vs single tools — use update_multiple_devices when two or more devices need to change.
+5. How to resolve pronouns — use the conversation history to map "it", "them", "that device", "the last one", etc.
 
-# Helper function to get fresh device data each time
-def _get_current_devices():
-    return get_devices()
+## Available Tools
+- list_devices: Discover all devices, map names to ids, check current statuses
+- get_device_status: Inspect one specific device (when you already know its id)
+- set_device_status: Change state of exactly ONE device
+- update_multiple_devices: Change state of TWO OR MORE devices in a single call
+
+## Agentic ReAct Loop
+Follow this loop until the task is complete:
+  Thought -> Tool Selection -> Tool Call -> Observation -> Thought -> ... -> Final Response
+
+## Device State Values
+ALL devices use only "on" or "off" — there is no "online" or "offline" state.
+This applies to every device including Dishwasher and Fan.
+
+## Multi-Step Example
+User: "Turn off all devices that are on"
+  Step 1 -> list_devices()             (discover which are on)
+  Step 2 -> update_multiple_devices()  (bulk set them off)
+  Step 3 -> Respond with a clear summary of what changed.
+
+## Context / Memory Example
+User: "Turn off Heat pump"        -> act
+User: "What was its status?"      -> resolve "its" = Heat pump from history, call get_device_status or recall from prior observation
+
+## Response Style
+- Be concise but complete.
+- Always confirm WHAT changed and the NEW state.
+- If a device was already in the requested state, mention it.
+- On errors, explain what went wrong and what you tried.
+
+## CRITICAL RULE
+Never hard-code device ids in your reasoning. Always verify via list_devices when unsure.
+"""
 
 
+# ─────────────────────────────────────────────
+# Response schema (for API layer)
+# ─────────────────────────────────────────────
 class DeviceStatusResponse(BaseModel):
     """Response model for device status"""
     device_id: int
@@ -43,363 +104,207 @@ class DeviceStatusResponse(BaseModel):
     status: str
 
 
+# ─────────────────────────────────────────────
+# Agent
+# ─────────────────────────────────────────────
 class DeviceControlAgent:
     """
-    Device Control Agent using Amazon Bedrock Nova Lite.
-    
-    Implements ReAct pattern: Reason → Tool Call → Observation → Reason → Final Response
+    90% Agentic Device Control Agent.
+
+    Nova Lite drives all decision-making through Strands' native tool-calling
+    loop.  Python only:
+      - builds the conversation message list
+      - calls agent()
+      - appends history entries
     """
-    
+
     def __init__(self):
-        """Initialize the Device Control Agent with Strands SDK and Bedrock Nova Lite."""
         settings = get_settings()
-        
-        # Initialize Bedrock client
-        self.bedrock_client = boto3.client(
-            service_name="bedrock-runtime",
-            region_name=settings.aws_region
+
+        self.model_id = settings.bedrock_model_id  # us.amazon.nova-2-lite-v1:0
+
+        # Extended read timeout for multi-step ReAct reasoning chains
+        botocore_cfg = BotoCoreConfig(
+            read_timeout=300,
+            connect_timeout=30,
+            retries={"max_attempts": 3},
         )
-        
-        self.model_id = settings.bedrock_model_id
-        self.conversation_history = []
-        
-        # Import Strands SDK components
-        from strands import Agent, tool
-        
-        # Import and register tools using Strands SDK
-        from app.agent.tools.device_tools import (
-            list_devices_tool,
-            get_device_status_tool,
-            set_device_status_tool
+
+        # Use BedrockModel with the correct Strands 0.3.0 API
+        # streaming=False -> uses converse (not converse_stream) which is
+        # stable for multi-turn tool-use flows on Nova 2 Lite.
+        # max_tokens=512 reduces throttling on the final synthesis turn.
+        model = BedrockModel(
+            model_id=self.model_id,
+            region_name=settings.aws_region,
+            boto_client_config=botocore_cfg,
+            temperature=0.3,
+            top_p=0.9,
+            max_tokens=512,
+            streaming=False,
         )
-        
-        # Create Strands Agent with tools
-        self.strands_agent = Agent(
-            name="DeviceControlAgent",
-            description="Agent for controlling devices through natural language",
-            tools=[list_devices_tool, get_device_status_tool, set_device_status_tool]
+
+        # Build the Strands Agent with all four device tools
+        self.agent = Agent(
+            model=model,
+            system_prompt=SYSTEM_PROMPT,
+            tools=[
+                list_devices_tool,
+                get_device_status_tool,
+                set_device_status_tool,
+                update_multiple_devices_tool,
+            ],
         )
-        
-        # Initialize tools dictionary for direct access
-        self.tools = {
-            "list_devices": list_devices_tool,
-            "get_device_status": get_device_status_tool,
-            "set_device_status": set_device_status_tool
-        }
-        
-        logger.info("Device Control Agent initialized with Strands SDK and Bedrock Nova Lite")
-    
-    def _generate_bedrock_response(self, prompt: str) -> str:
-        """Generate response using Amazon Bedrock Nova Lite"""
-        try:
-            request_body = {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                "inferenceConfig": {
-                    "max_new_tokens": 500,
-                    "temperature": 0.7,
-                    "top_p": 0.9
-                }
-            }
-            
-            response = self.bedrock_client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(request_body),
-                contentType="application/json",
-                accept="application/json"
-            )
-            
-            result = json.loads(response["body"].read().decode("utf-8"))
-            
-            # Extract the text content
-            try:
-                return result["output"]["message"]["content"][0]["text"]
-            except (KeyError, IndexError):
-                if "completion" in result:
-                    return result["completion"]
-                elif "outputText" in result:
-                    return result["outputText"]
-                else:
-                    logger.warning(f"Unexpected response format: {result}")
-                    return str(result)
-                    
-        except (ClientError, BotoCoreError) as e:
-            logger.error(f"Bedrock error: {str(e)}")
-            raise Exception(f"Failed to generate response: {str(e)}")
-    
-    def _simple_intent_analysis(self, user_request: str) -> Dict[str, Any]:
-        """Simple intent analysis for device control requests"""
-        request_lower = user_request.lower()
-        
-        # Extract device information
-        device_info = {}
-        
-        # Check for specific device names
-        device_names = {
-            "dishwasher": 101,
-            "fan": 102,
-            "heat pump": 1,
-            "ev charger": 2,
-            "kitchen": 3,
-            "hvac": 4,
-            "water heater": 5,
-            "solar inverter": 6
-        }
-        
-        # Find mentioned device
-        for name, device_id in device_names.items():
-            if name in request_lower:
-                device_info["device_name"] = name
-                device_info["device_id"] = device_id
-                break
-        
-        # Extract device ID if mentioned (e.g., "device 101")
-        if not device_info.get("device_id"):
-            import re
-            device_id_match = re.search(r'device\s+(\d+)', request_lower)
-            if device_id_match:
-                device_id = int(device_id_match.group(1))
-                # Get fresh device data to check if device exists
-                current_devices = _get_current_devices()
-                device = next((d for d in current_devices if d["id"] == device_id), None)
-                if device:
-                    device_info["device_id"] = device_id
-                    device_info["device_name"] = device["name"]
-        
-        # Determine intent
-        intent = "unknown"
-        
-        if any(word in request_lower for word in ["status", "check", "what is"]):
-            intent = "get_status"
-        elif any(word in request_lower for word in ["turn off", "off", "disable"]):
-            intent = "turn_off"
-        elif any(word in request_lower for word in ["turn on", "on", "enable"]):
-            intent = "turn_on"
-        elif any(word in request_lower for word in ["list", "all", "show"]):
-            intent = "list_devices"
-        
-        return {
-            "intent": intent,
-            "device_info": device_info,
-            "request": user_request
-        }
-    
-    def _build_agent_prompt(self, user_request: str) -> str:
-        """Build the prompt for the agent with context and instructions"""
-        return f"""
-        You are a Device Control Agent that can understand natural language requests 
-        and control devices using available tools.
 
-        Current conversation history:
-        {json.dumps(self.conversation_history)}
+        # Conversation memory — persisted across requests within one process
+        self.conversation_history: List[Dict[str, Any]] = []
 
-        User request: "{user_request}"
+        logger.info(
+            "DeviceControlAgent ready | model=%s | tools=[list_devices, "
+            "get_device_status, set_device_status, update_multiple_devices]",
+            self.model_id,
+        )
 
-        Available tools:
-        1. list_devices() - Returns all available devices
-        2. get_device_status(device_id) - Returns device id, device name, and current status
-        3. set_device_status(device_id, state) - Updates device status
+    # ──────────────────────────────────────────────────────────────────────
+    # Public API
+    # ──────────────────────────────────────────────────────────────────────
 
-        Instructions:
-        1. Analyze the user request to understand their intent
-        2. Determine which tool(s) to use
-        3. Call the appropriate tool with correct arguments
-        4. Use the tool observations to determine next actions
-        5. Provide a final natural language response to the user
-
-        Follow the ReAct pattern:
-        Reason → Tool Call → Observation → Reason → Final Response
-
-        Respond with your reasoning and tool calls in JSON format:
-        {{
-            "thought": "Your reasoning about what to do",
-            "action": "tool_name",
-            "action_input": {{...}}
-        }}
-
-        When you have enough information to answer the user, respond with:
-        {{
-            "thought": "Final reasoning",
-            "response": "Your natural language response to the user"
-        }}
-        """
-    
     def process_request(self, user_request: str) -> str:
         """
-        Process a user request using the ReAct pattern.
-        
-        Args:
-            user_request: Natural language request from user
-            
-        Returns:
-            Natural language response to the user
-        """
-        logger.info(f"User Request: {user_request}")
-        
-        # Add to conversation history
-        self.conversation_history.append({
-            "role": "user",
-            "content": user_request,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        # Simple intent analysis (fallback if Bedrock is not available)
-        intent_analysis = self._simple_intent_analysis(user_request)
-        
-        # Process based on intent
-        if intent_analysis["intent"] == "list_devices":
-            logger.info("Selected Tool: list_devices")
-            observation = self.tools["list_devices"]()
-            logger.info(f"Tool Result: {observation}")
-            
-            devices = observation["devices"]
-            device_statuses = [f"{d['device_name']} ({d['status']})" for d in devices]
-            final_response = f"Here are all available devices: {', '.join(device_statuses)}"
-            
-        elif intent_analysis["intent"] == "get_status":
-            if intent_analysis["device_info"]:
-                device_id = intent_analysis["device_info"]["device_id"]
-                logger.info(f"Selected Tool: get_device_status({device_id})")
-                # Get fresh device data before calling tool
-                current_devices = _get_current_devices()
-                observation = self.tools["get_device_status"](device_id)
-                logger.info(f"Tool Result: {observation}")
-                
-                if "error" in observation:
-                    final_response = observation["error"]
-                else:
-                    final_response = f"The {observation['device_name']} is currently {observation['status']}."
-            else:
-                final_response = "I couldn't determine which device you're asking about. Please specify a device name or ID."
-                
-        elif intent_analysis["intent"] in ["turn_off", "turn_on"]:
-            if intent_analysis["device_info"]:
-                device_id = intent_analysis["device_info"]["device_id"]
-                state = "off" if intent_analysis["intent"] == "turn_off" else "on"
-                
-                # First check current status
-                logger.info(f"Selected Tool: get_device_status({device_id})")
-                status_observation = self.tools["get_device_status"](device_id)
-                logger.info(f"Tool Result: {status_observation}")
-                
-                if "error" in status_observation:
-                    final_response = status_observation["error"]
-                else:
-                    # Now update status
-                    logger.info(f"Selected Tool: set_device_status({device_id}, {state})")
-                    update_observation = self.tools["set_device_status"](device_id, state)
-                    logger.info(f"Tool Result: {update_observation}")
-                    
-                    if update_observation["success"]:
-                        final_response = f"The {status_observation['device_name']} was {status_observation['status']} and has now been turned {state}."
-                    else:
-                        final_response = update_observation["message"]
-            else:
-                final_response = "I couldn't determine which device you want to control. Please specify a device name or ID."
-                
-        else:
-            # Use Bedrock for more complex requests
-            try:
-                prompt = self._build_agent_prompt(user_request)
-                response_text = self._generate_bedrock_response(prompt)
-                
-                try:
-                    agent_response = json.loads(response_text)
-                except json.JSONDecodeError:
-                    final_response = response_text
-                
-                # Process agent's reasoning and tool calls
-                max_iterations = 3
-                iteration = 0
-                
-                while iteration < max_iterations:
-                    iteration += 1
-                    
-                    if "response" in agent_response:
-                        # Final response to user
-                        final_response = agent_response["response"]
-                        break
-                    
-                    if "action" in agent_response:
-                        # Tool call
-                        action_name = agent_response["action"]
-                        action_input = agent_response.get("action_input", {})
-                        
-                        logger.info(f"Selected Tool: {action_name}")
-                        logger.info(f"Tool Arguments: {action_input}")
-                        
-                        # Execute the tool
-                        try:
-                            if action_name in self.tools:
-                                observation = self.tools[action_name](**action_input)
-                            else:
-                                observation = {"error": f"Unknown tool: {action_name}"}
-                            
-                            logger.info(f"Observation: {observation}")
-                            
-                            # Add observation to conversation history
-                            self.conversation_history.append({
-                                "role": "observation",
-                                "content": observation,
-                                "timestamp": datetime.now().isoformat()
-                            })
-                            
-                            # Generate next reasoning step
-                            followup_prompt = f"""
-                            Previous thought: {agent_response.get('thought', '')}
-                            Tool call: {action_name}({action_input})
-                            Observation: {observation}
+        Process a natural-language device-control request.
 
-                            What should you do next? Continue with the ReAct pattern.
-                            """
-                            
-                            response_text = self._generate_bedrock_response(followup_prompt)
-                            
-                            try:
-                                agent_response = json.loads(response_text)
-                            except json.JSONDecodeError:
-                                final_response = response_text
-                                break
-                                
-                        except Exception as e:
-                            logger.error(f"Tool execution error: {str(e)}")
-                            final_response = f"Error executing tool {action_name}: {str(e)}"
-                            break
-                    else:
-                        final_response = "I'm sorry, I couldn't determine what action to take."
-                        break
-                
-                if final_response is None:
-                    final_response = "I couldn't complete your request after multiple attempts."
-                    
-            except Exception as e:
-                logger.error(f"Bedrock processing error: {str(e)}")
-                final_response = f"I'm sorry, I encountered an error processing your request: {str(e)}"
-        
-        # Add final response to conversation history
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": final_response,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        logger.info(f"Final Response: {final_response}")
+        The Strands Agent handles the full ReAct loop:
+          Reason -> Select tool -> Execute -> Observe -> Reason -> ... -> Respond
+
+        Args:
+            user_request: Natural language input from the user.
+
+        Returns:
+            Natural language response string.
+        """
+        logger.info("User Request: %s", user_request)
+
+        # Build context-enriched message with recent conversation history
+        # so Nova Lite can resolve pronouns and maintain continuity
+        context_block = self._format_history_context()
+
+        full_message = (
+            f"{context_block}\n\nUser: {user_request}"
+            if context_block
+            else user_request
+        )
+
+        # Record user turn in memory
+        self.conversation_history.append(
+            {
+                "role": "user",
+                "content": user_request,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
+        # Let Strands / Nova Lite drive the full ReAct loop
+        try:
+            result = self.agent(full_message)
+            final_response = self._extract_text(result)
+
+        except (ClientError, BotoCoreError) as exc:
+            logger.error("Bedrock error: %s", exc)
+            final_response = (
+                "I encountered an AWS service error while processing your request. "
+                "Please check your credentials and try again."
+            )
+        except Exception as exc:
+            logger.error("Agent error: %s", exc, exc_info=True)
+            final_response = (
+                "I encountered an unexpected error. "
+                "Please try again or rephrase your request."
+            )
+
+        # Record assistant turn in memory
+        self.conversation_history.append(
+            {
+                "role": "assistant",
+                "content": final_response,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
+        logger.info("Final Response: %s", final_response)
         return final_response
+
+    def reset_memory(self) -> None:
+        """Clear conversation history (useful between sessions)."""
+        self.conversation_history.clear()
+        logger.info("Conversation history cleared.")
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Private helpers
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _format_history_context(self) -> str:
+        """
+        Render the last N conversation turns as a compact text block so Nova
+        Lite can use it for pronoun resolution and continuity.
+        """
+        # Only include the last 10 turns to avoid context bloat
+        recent = self.conversation_history[-10:]
+        if not recent:
+            return ""
+
+        lines = ["[Conversation history - use this to resolve pronouns and references]"]
+        for turn in recent:
+            role = turn["role"].capitalize()
+            content = turn["content"]
+            if isinstance(content, dict):
+                import json
+                content = json.dumps(content)
+            # Truncate very long observations
+            if len(str(content)) > 500:
+                content = str(content)[:500] + "..."
+            lines.append(f"{role}: {content}")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _extract_text(result: Any) -> str:
+        """
+        Extract the final text response from a Strands AgentResult object or
+        a plain string fallback.
+        """
+        # Strands AgentResult has a .message attribute (dict) in some versions
+        if hasattr(result, "message"):
+            msg = result.message
+            if isinstance(msg, dict):
+                content = msg.get("content", [])
+                if isinstance(content, list):
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            return block["text"]
+                        if isinstance(block, dict) and "text" in block:
+                            return block["text"]
+                if isinstance(content, str):
+                    return content
+
+        # Direct string conversion fallback
+        text = str(result)
+        return text if text and text != "None" else "I completed the request."
+
+
+# ─────────────────────────────────────────────
+# Singleton factory — one agent per process
+# ─────────────────────────────────────────────
+_agent_instance: "DeviceControlAgent | None" = None
 
 
 def get_device_agent() -> DeviceControlAgent:
     """
-    Factory function to create and return a DeviceControlAgent instance.
-    
-    Returns:
-        DeviceControlAgent: Initialized device control agent
+    Return the shared DeviceControlAgent instance.
+
+    Creates it on first call so that the Strands Agent is initialised once
+    and conversation memory persists across requests within the same process.
     """
-    return DeviceControlAgent()
+    global _agent_instance
+    if _agent_instance is None:
+        _agent_instance = DeviceControlAgent()
+    return _agent_instance
