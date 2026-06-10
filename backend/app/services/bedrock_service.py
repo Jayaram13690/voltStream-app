@@ -98,7 +98,7 @@ class BedrockService:
             ],
             "inferenceConfig": {
                 "max_new_tokens": token_limit,
-                "temperature": 0.7,
+                "temperature": 0.3,
                 "top_p": 0.9
             }
         }
