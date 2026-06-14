@@ -62,8 +62,8 @@ async def answer_question(request: QARequest):
                 "context_used": "Query violates document-only constraints."
             }
 
-        # Initialize auto-ingestion service
-        auto_ingest = AutoIngestService()
+        # Initialize auto-ingestion service with correct path
+        auto_ingest = AutoIngestService('app/document/Solar_Energy_Report.pdf')
         auto_ingest.auto_ingest_if_changed()
 
         # RAG processing with confidence threshold

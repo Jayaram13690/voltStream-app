@@ -106,6 +106,23 @@ class VectorStoreService:
         print(f"DEBUG: After filtering - {len(filtered_results)} documents pass threshold")
         return filtered_results
     
+    def clear_collection(self):
+        """Clear all documents from the collection"""
+        try:
+            # Get all document IDs
+            all_ids = [id for id in self.collection.get()['ids']]
+            
+            # Delete all documents if collection is not empty
+            if all_ids:
+                self.collection.delete(ids=all_ids)
+                print(f"DEBUG: Cleared {len(all_ids)} documents from collection")
+            else:
+                print("DEBUG: Collection was already empty")
+            return True
+        except Exception as e:
+            print(f"DEBUG: Error clearing collection: {e}")
+            return False
+
     def persist(self):
         """Persist the database to disk"""
         # PersistentClient handles persistence automatically

@@ -11,21 +11,36 @@ class AutoIngestService:
 
     def __init__(self, pdf_path: str = "document/Solar_Energy_Report.pdf"):
         self.pdf_path = pdf_path
-        self.hash_file = os.path.join(os.path.dirname(pdf_path), self.HASH_FILE)
+        # Ensure hash file is stored in the same directory as the PDF
+        doc_dir = os.path.dirname(os.path.abspath(pdf_path))
+        self.hash_file = os.path.join(doc_dir, self.HASH_FILE)
 
     def get_current_hash(self) -> str:
         """Get hash of current document"""
-        pdf_service = PDFService(self.pdf_path)
-        return pdf_service.get_document_hash(self.pdf_path)
+        try:
+            pdf_service = PDFService(self.pdf_path)
+            hash_value = pdf_service.get_document_hash(self.pdf_path)
+            print(f"DEBUG: Current hash calculated: {hash_value[:16]}..." if hash_value else "DEBUG: Current hash is empty")
+            return hash_value
+        except Exception as e:
+            print(f"DEBUG: Error calculating current hash: {e}")
+            return ""
 
     def get_stored_hash(self) -> str:
         """Get previously stored hash"""
         if not os.path.exists(self.hash_file):
+            print(f"DEBUG: No hash file found at {self.hash_file}")
             return ""
 
-        with open(self.hash_file, 'r') as f:
-            data = json.load(f)
-            return data.get('hash', "")
+        try:
+            with open(self.hash_file, 'r') as f:
+                data = json.load(f)
+                stored_hash = data.get('hash', "")
+                print(f"DEBUG: Stored hash loaded: {stored_hash[:16]}..." if stored_hash else "DEBUG: Stored hash is empty")
+                return stored_hash
+        except Exception as e:
+            print(f"DEBUG: Error reading hash file: {e}")
+            return ""
 
     def store_hash(self, hash_value: str):
         """Store current document hash"""
@@ -53,6 +68,7 @@ class AutoIngestService:
 
     def auto_ingest_if_changed(self):
         """Automatically ingest if document changed"""
+        print(f"DEBUG: auto_ingest_if_changed() called for {self.pdf_path}")
         if not self.check_for_changes():
             print("DEBUG: Document unchanged, skipping ingestion")
             return False
@@ -64,7 +80,7 @@ class AutoIngestService:
             documents = pdf_service.load_pdf()
             print(f"DEBUG: Loaded {len(documents)} document pages")
             
-            chunks = pdf_service.split_text(documents, chunk_size=750, chunk_overlap=150)
+            chunks = pdf_service.split_text(documents, chunk_size=500, chunk_overlap=100)
             print(f"DEBUG: Split into {len(chunks)} chunks")
 
             # Generate embeddings
@@ -81,8 +97,11 @@ class AutoIngestService:
 
             print(f"DEBUG: Generated {len(embeddings)} embeddings ({embedding_failures} failures)")
 
-            # Store in ChromaDB
+            # Clear old chunks before adding new ones
             vector_store = VectorStoreService()
+            vector_store.clear_collection()
+            
+            # Store new chunks in ChromaDB
             vector_store.add_documents(chunks, embeddings)
             
             # Verify collection
