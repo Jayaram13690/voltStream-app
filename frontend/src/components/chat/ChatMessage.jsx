@@ -133,9 +133,15 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
   
   const formattedContent = formatContent(content)
   
+  // Debug: Log the formatted content for QA messages
+  if (activeTab === 'rag') {
+    console.log('[QA DEBUG] Original content:', content)
+    console.log('[QA DEBUG] Formatted content:', formattedContent)
+  }
+  
   // Safety check for formatted content
   if (!formattedContent || typeof formattedContent !== 'string') {
-    console.error('Invalid formatted content:', formattedContent)
+    console.error('Invalid formatted content:', formattedContent, 'Original content:', content)
     return (
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
         <div className={`max-w-[90%] ${isUser ? 'mr-2' : 'ml-2'}`}>

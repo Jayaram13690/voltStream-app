@@ -58,27 +58,53 @@ export const useChatStore = create((set, get) => ({
       let response
       let endpoint, requestBody
       
-      // Determine endpoint and request format based on mode
-      if (mode === 'agent') {
+      // Determine endpoint and request format based on tab first, then mode
+      if (tab === 'rag') {
+        // RAG endpoint - always use RAG regardless of mode
+        endpoint = '/api/v1/qa'
+        requestBody = { question: question }  // RAG expects {question: "..."}
+      } else if (mode === 'agent') {
         // Device Control Agent endpoint
         endpoint = '/api/v1/agent'
-        requestBody = { message: question }
-      } else if (tab === 'chat') {
+        requestBody = { message: question }  // Agent expects {message: "..."}
+      } else {
         // General chat endpoint
         endpoint = '/api/v1/chat'
-        requestBody = { question }
-      } else {
-        // RAG endpoint
-        endpoint = '/api/v1/qa'
-        requestBody = { question }
+        requestBody = { question: question }  // Chat expects {question: "..."}
       }
       
       response = await api.post(endpoint, requestBody)
       
+      // Debug: Log the actual response structure
+      console.log(`[DEBUG] Endpoint: ${endpoint}, Response:`, response.data)
+      
       // Add AI response to appropriate tab
-      const answer = mode === 'agent' 
-        ? response.data.response 
-        : response.data.answer
+      let answer
+      if (tab === 'rag') {
+        // RAG tab ALWAYS uses QA endpoint regardless of mode
+        answer = response.data.answer || response.data.response || 'No answer received'
+        
+        // Debug: Check if we got a valid answer from QA
+        if (!answer || answer === 'No answer received') {
+          console.error('[QA ERROR] No valid answer found in response:', response.data)
+        } else {
+          console.log('[QA SUCCESS] Extracted answer:', answer)
+        }
+      } else if (mode === 'agent') {
+        // Device agent in chat tab
+        answer = response.data.response
+      } else {
+        // Normal chat
+        answer = response.data.answer || response.data.response || 'No answer received'
+      }
+      
+      console.log(`[DEBUG] Extracted answer:`, answer)
+      
+      // Final safety check - ensure answer is a valid non-empty string
+      if (!answer) {
+        console.error('[CRITICAL] No answer found. Value:', answer)
+        answer = 'Sorry, I could not process your request properly.'
+      }
       
       if (tab === 'chat') {
         get().addChatMessage('ai', answer, mode)
@@ -100,7 +126,13 @@ export const useChatStore = create((set, get) => ({
       let errorMessage = 'Failed to get response from the server'
       if (error.response) {
         // Server responded with a status code outside 2xx
-        errorMessage = error.response.data.detail || error.response.data.message || errorMessage
+        errorMessage = error.response.data.detail || 
+                      error.response.data.message || 
+                      error.response.data.error || 
+                      errorMessage
+        // Add endpoint info for debugging
+        console.error(`Endpoint: ${endpoint}, Status: ${error.response.status}`)
+        console.error('Response data:', error.response.data)
       } else if (error.request) {
         // Request was made but no response received
         errorMessage = 'No response from server. Please check your connection.'
