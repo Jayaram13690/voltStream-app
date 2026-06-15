@@ -1,7 +1,6 @@
 """
 Chat API endpoints using AWS Bedrock.
 """
-
 from fastapi import APIRouter, HTTPException
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.bedrock_service import generate_response
