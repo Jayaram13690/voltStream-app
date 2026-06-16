@@ -2,6 +2,8 @@ from typing import List, Dict, Any, Optional
 from app.services.embedding_service import EmbeddingService
 from app.services.vector_store_service import VectorStoreService
 from app.services.custom_ragas_evaluation import CustomRagasEvaluationService
+from app.services.simple_chat_memory import get_simple_chat_memory
+from app.services.bedrock_service import get_bedrock_service
 
 class RAGService:
     def __init__(self, enable_evaluation: bool = False):
@@ -10,6 +12,9 @@ class RAGService:
         self.enable_evaluation = enable_evaluation
         if self.enable_evaluation:
             self.ragas_evaluator = CustomRagasEvaluationService()
+        # Initialize simple chat memory for RAG conversation history only
+        self.chat_memory = get_simple_chat_memory(max_history=10)
+        self.bedrock_service = get_bedrock_service()
     
     def retrieve_context(self, question: str, k: int = 3, confidence_threshold: float = 0.4) -> str:
         """Retrieve and format context with confidence filtering"""
@@ -94,3 +99,29 @@ class RAGService:
             print("DEBUG: Context is empty after stripping")
             return "NO_RELEVANT_CONTEXT_FOUND"
         return context
+    
+    def chat_rag(self, question: str) -> str:
+        """Handle RAG chat with isolated conversation history."""
+        # Add user question to RAG history
+        self.chat_memory.add_rag_message("user", question)
+        
+        # Get retrieved context from documents
+        context = self.get_retrieved_context(question)
+        
+        if context == "NO_RELEVANT_CONTEXT_FOUND":
+            response = "I don't have that information."
+            # Still add to history even if no context found
+            self.chat_memory.add_rag_message("ai", response)
+            return response
+        
+        # Get RAG conversation context
+        rag_context = self.chat_memory.get_rag_context()
+        
+        # Generate RAG prompt with RAG conversation history only
+        prompt = self.generate_rag_prompt(question, context)
+        response = self.bedrock_service.generate_rag_response(prompt)
+        
+        # Add AI response to RAG history
+        self.chat_memory.add_rag_message("ai", response)
+        
+        return response

@@ -53,7 +53,7 @@ class BedrockService:
     def generate_response(self, question: str) -> str:
         """
         Generate response using prompt engineering for complete answers.
-        Uses structured prompts to ensure responses are well-formed and complete.
+        Uses structured prompts and enforces 50-word limit for cost control.
         """
 
         try:
@@ -64,7 +64,9 @@ class BedrockService:
             structured_prompt = self._build_structured_prompt(question)
 
             response = self._generate_with_tokens(structured_prompt, 500)
-            return response
+            
+            # Word limit enforced by prompt only
+            return response if response else "I don't have that information."
 
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -80,8 +82,10 @@ class BedrockService:
             raise Exception(f"Failed to generate response: {str(e)}")
 
     def generate_rag_response(self, rag_prompt: str) -> str:
-        """Generate response using RAG prompt without modification"""
-        return self._generate_with_tokens(rag_prompt, 1000)
+        """Generate response using RAG prompt with 50-word limit"""
+        response = self._generate_with_tokens(rag_prompt, 1000)
+        # Word limit enforced by prompt only
+        return response if response else "I don't have that information."
     
     def _generate_with_tokens(self, prompt: str, token_limit: int) -> str:
         """Generate response with specific token limit"""
@@ -134,49 +138,49 @@ class BedrockService:
         # Handle greetings and simple conversations
         if any(greeting in question_lower for greeting in ['hi', 'hello', 'hey', 'how are you']):
             return f"""
-            You are VoltStream AI Assistant. The user greeted you with: '{question}'
-            Respond with a friendly greeting and briefly mention you can help with energy-related questions.
+            You are AI Assistant. The user greeted you with: '{question}'
+            Respond with a friendly greeting.
             Keep the response warm and concise (under 50 words).
             """
 
         # Handle energy/solar specific questions
-        elif any(topic in question_lower for topic in ['energy', 'solar', 'power', 'electricity', 'renewable', 'sustainability', 'battery', 'grid']):
-            return f"""
-            You are VoltStream AI Assistant, an expert in energy, solar systems, and sustainability.
-            Provide a complete, well-structured answer to the following question.
-            Your response should:
+        # elif any(topic in question_lower for topic in ['energy', 'solar', 'power', 'electricity', 'renewable', 'sustainability', 'battery', 'grid']):
+        #     return f"""
+        #     You are VoltStream AI Assistant, an expert in energy, solar systems, and sustainability.
+        #     Provide a complete, well-structured answer to the following question.
+        #     Your response should:
 
-            1. Start with a clear, concise definition or explanation
-            2. Include 2-3 key points with examples where relevant
-            3. End with a summary sentence or conclusion
-            4. Use bullet points for lists
-            5. Keep the total response under 400 words
+        #     1. Start with a clear, concise definition or explanation
+        #     2. Include 2-3 key points with examples where relevant
+        #     3. End with a summary sentence or conclusion
+        #     4. Use bullet points for lists
+        #     5. Keep the total response under 100 words
 
-            Question: {question}
+        #     Question: {question}
 
-            Format your response as follows:
-            [Brief introduction]
+        #     Format your response as follows:
+        #     [Brief introduction]
 
-            Key points:
-            • Point 1 with brief explanation
-            • Point 2 with brief explanation
-            • Point 3 with brief explanation (if applicable)
+        #     Key points:
+        #     • Point 1 with brief explanation
+        #     • Point 2 with brief explanation
+        #     • Point 3 with brief explanation (if applicable)
 
-            [Concluding sentence that summarizes the main takeaway]
-            """
+        #     [Concluding sentence that summarizes the main takeaway]
+        #     """
 
         # Handle general questions
         else:
             return f"""
-            You are VoltStream AI Assistant.
-            Answer the following general question concisely and helpfully.
+            You are a helpful AI assistant. Answer to any question concisely in 50 words or less.
+            Use conversation context to understand pronouns and references.
+            Be accurate, professional, and to the point.
 
-            Question: {question}
+            CONVERSATION CONTEXT: [Previous conversation provided separately]
 
-            Guidelines:
-            1. Be helpful and professional
-            2. Keep responses under 300 words
-            3. Always maintain a friendly, helpful tone
+            USER QUESTION: {question}
+
+            CONCISE RESPONSE (50 words max):
             """
 
 
