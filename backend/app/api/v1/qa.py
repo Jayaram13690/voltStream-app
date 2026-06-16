@@ -50,7 +50,7 @@ def is_allowed_question(question: str) -> bool:
 
 @router.post("/qa")
 async def answer_question(request: QARequest):
-    """Strict document-only QA with security validation"""
+    """Strict document-only QA with isolated conversation history and security validation"""
     try:
         question = request.question.strip()
         print(f"=== STARTING QA PROCESSING FOR: '{question}' ===")
@@ -66,8 +66,10 @@ async def answer_question(request: QARequest):
         auto_ingest = AutoIngestService('app/document/Solar_Energy_Report.pdf')
         auto_ingest.auto_ingest_if_changed()
 
-        # RAG processing with confidence threshold
+        # Use RAG service with isolated conversation history
         rag_service = RAGService()
+        
+        # First get retrieved context from documents
         print(f"DEBUG: QA endpoint calling get_retrieved_context with threshold: 0.4")
         context = rag_service.get_retrieved_context(question, confidence_threshold=0.4)
         print(f"DEBUG: QA endpoint received context: '{context[:50]}...'" if len(context) > 50 else f"DEBUG: QA endpoint received context: '{context}'")
@@ -80,12 +82,8 @@ async def answer_question(request: QARequest):
                 "context_used": "No relevant document context found."
             }
         
-        # Generate response with strict prompt
-        prompt = rag_service.generate_rag_prompt(question, context)
-        print(f"DEBUG: Generated prompt length: {len(prompt)} characters")
-        bedrock_service = BedrockService()
-        answer = bedrock_service.generate_rag_response(prompt)
-        print(f"DEBUG: Bedrock response: '{answer}'")
+        # Now use chat_rag method which handles both document context AND conversation history
+        answer = rag_service.chat_rag(question)
         
         # Post-processing: Ensure no context leakage
         answer_lower = answer.lower()
@@ -101,11 +99,26 @@ async def answer_question(request: QARequest):
         print(f"=== QA PROCESSING COMPLETED SUCCESSFULLY FOR: '{question}' ===")
         return {
             "answer": answer,
-            "context_used": "Document context retrieved and used."
+            "context_used": "Document context retrieved and used with isolated RAG history."
         }
         
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"RAG processing error: {str(e)}"
+        )
+
+
+@router.post("/qa/clear")
+async def clear_rag_history():
+    """Clear the RAG conversation history."""
+    try:
+        rag_service = RAGService()
+        rag_service.chat_memory.clear_rag_history()
+        return {"status": "success", "message": "RAG chat history cleared"}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear RAG history: {str(e)}"
         )
