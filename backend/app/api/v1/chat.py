@@ -1,17 +1,23 @@
 """
-Chat API endpoints using AWS Bedrock.
+Chat API endpoints using dedicated ChatService (not RAG).
 """
 from fastapi import APIRouter, HTTPException
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.bedrock_service import generate_response
+from app.services.chat_service import ChatService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+# Initialize dedicated chat service (separate from RAG)
+chat_service = ChatService()
 
 
 @router.post("", response_model=ChatResponse)
 def chat_endpoint(request: ChatRequest) -> ChatResponse:
     """
-    Chat endpoint that uses AWS Bedrock to generate responses.
+    General AI Chat endpoint.
+    
+    Uses pure LLM conversation with history, no document retrieval.
+    Can answer general knowledge questions about any topic.
     
     Args:
         request (ChatRequest): Contains the question to ask
@@ -23,8 +29,8 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
         HTTPException: If there's an error generating the response
     """
     try:
-        # Generate response using Bedrock service
-        answer = generate_response(request.question)
+        # Use dedicated chat service (not RAG)
+        answer = chat_service.chat(request.question)
         
         return ChatResponse(answer=answer)
         
@@ -32,3 +38,17 @@ def chat_endpoint(request: ChatRequest) -> ChatResponse:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")
+
+
+@router.post("/clear", response_model=dict)
+def clear_chat_history():
+    """Clear the general AI chat conversation history."""
+    try:
+        chat_service.clear_history()
+        return {"status": "success", "message": "General chat history cleared"}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear chat history: {str(e)}"
+        )
