@@ -165,7 +165,7 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
                   <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                     activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                   }`}>
-                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : "Generative AI") : "Document Answer"}
+                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : mode === 'energy' ? "Energy Advisor" : "Generative AI") : "Document Answer"}
                   </span>
                   {mode === 'agent' && content && content.toLowerCase().includes('turned') && (
                     <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 animate-pulse">
@@ -217,11 +217,16 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
                   <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                     activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                   }`}>
-                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : "Generative AI") : "Document Answer"}
+                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : mode === 'energy' ? "Energy Advisor" : "Generative AI") : "Document Answer"}
                   </span>
                   {mode === 'agent' && content && content.toLowerCase().includes('turned') && (
                     <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 animate-pulse">
                       ✅ Updated
+                    </span>
+                  )}
+                  {mode === 'energy' && content && (content.toLowerCase().includes('$') || content.toLowerCase().includes('savings')) && (
+                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                      💡 Energy Tip
                     </span>
                   )}
                 </div>
