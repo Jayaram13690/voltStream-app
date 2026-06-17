@@ -1,23 +1,23 @@
 """
-Device Control Agent Service — 90% Agentic Architecture.
+Energy Advisor Agent Service — Production-Quality Implementation.
 
 Powered by:
-  * Amazon Bedrock  Nova 2 Lite  (us.amazon.nova-2-lite-v1:0)
+  * Amazon Bedrock Nova 2 Lite (us.amazon.nova-2-lite-v1:0)
   * Strands Agents SDK 0.3.0
-  * ReAct  (Reason -> Tool Call -> Observe -> Reason -> ... -> Respond)
+  * ReAct Pattern (Reason -> Tool Call -> Observe -> Reason -> ... -> Respond)
 
-Decision-making that is now handled entirely by Nova Lite (not Python):
-  - Intent classification
-  - Target device discovery & name->id resolution
-  - Workflow sequencing  (which tool, in what order)
-  - Multi-device bulk operations via update_multiple_devices
-  - Pronoun / context resolution from conversation memory
-  - Error recovery reasoning
+Focus Areas:
+  - Electricity bill reduction advice
+  - Energy consumption analysis
+  - Solar utilization recommendations
+  - Budget monitoring and alerts
 
-The only Python logic that remains:
-  - Conversation memory appending
-  - Strands Agent initialisation
-  - HTTP error propagation
+Decision-making handled by Nova Lite:
+  - Energy usage pattern analysis
+  - Cost-saving opportunity identification
+  - Solar optimization strategies
+  - Budget compliance monitoring
+  - Personalized recommendation generation
 """
 
 import logging
@@ -31,13 +31,14 @@ from pydantic import BaseModel
 from strands import Agent
 from strands.models.bedrock import BedrockModel
 
-from app.agent.tools.device_tools import (
-    get_device_status_tool,
-    list_devices_tool,
-    set_device_status_tool,
-    update_multiple_devices_tool,
+from app.agent.tools.energy_tools import (
+    analyze_energy_usage_tool,
+    calculate_cost_analysis_tool,
+    solar_utilization_analysis_tool,
+    budget_monitoring_tool,
 )
 from app.core.config import get_settings
+
 
 # ─────────────────────────────────────────────
 # Logging
@@ -47,62 +48,83 @@ logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────
-# System prompt — concise agentic instructions
+# System prompt — drives energy advisory behavior
 # ─────────────────────────────────────────────
-SYSTEM_PROMPT = """You are a Device Control Agent managing smart-home devices autonomously.
 
-## Rules
-1. Never ask for confirmation - decide and act
-2. Use list_devices first when unsure of device IDs
-3. Use update_multiple_devices for 2+ devices, set_device_status for single devices
-4. Resolve pronouns using conversation history
-5. All devices use only "on"/"off" states
-
+SYSTEM_PROMPT = """You are an Energy Advisor Agent. 
+Use tool data only. Analyze energy, cost, solar, and budget metrics. 
+Recommend bill-reduction actions, prioritize by savings impact, quantify savings in dollars, provide concise actionable advice, and avoid unsupported recommendations.
 ## Tools
-- list_devices: List all devices with IDs and statuses
-- get_device_status(device_id): Get single device status
-- set_device_status(device_id, state): Set single device (state: "on"/"off")
-- update_multiple_devices(updates): Bulk update multiple devices
-
-## Workflow
-1. Analyze request
-2. Select appropriate tool(s)
-3. Execute and observe results
-4. Respond with clear confirmation of changes
-
-## Response Requirements
-- Be concise (50 words max)
-- Confirm what changed and new state
-- Mention if device was already in requested state
-- Explain errors clearly
-
+- analyze_energy_usage_tool(): Current energy consumption breakdown
+- calculate_cost_analysis_tool(period): Cost/savings analysis (period: current, daily, weekly, monthly)
+- solar_utilization_analysis_tool(): Solar usage optimization analysis
+- budget_monitoring_tool(): Budget compliance and alerts
 ## Critical
-Always verify device IDs via list_devices - never hardcode IDs.
+- Never make recommendations without supporting tool data.
+- Provide Summarised respose within 50 words.
 """
+# SYSTEM_PROMPT = """You are an Energy Advisor Agent providing electricity bill reduction advice, energy analysis, solar optimization, and budget monitoring.
+
+# ## Rules
+# 1. Always quantify savings in dollars
+# 2. Prioritize recommendations by financial impact
+# 3. Use simple, actionable language
+# 4. Base all advice on tool data
+# 5. Check budget status for context
+
+# ## Tools
+# - analyze_energy_usage_tool(): Current energy consumption breakdown
+# - calculate_cost_analysis_tool(period): Cost/savings analysis (period: current, daily, weekly, monthly)
+# - solar_utilization_analysis_tool(): Solar usage optimization analysis
+# - budget_monitoring_tool(): Budget compliance and alerts
+
+# ## Workflow
+# 1. analyze_energy_usage_tool() - Understand current usage
+# 2. calculate_cost_analysis_tool() - Identify savings opportunities
+# 3. solar_utilization_analysis_tool() - Optimize solar usage
+# 4. budget_monitoring_tool() - Check budget status
+# 5. Synthesize into prioritized recommendations
+
+# ## Response Requirements
+# - Quantify savings (e.g., "$25/month")
+# - Prioritize by impact (highest first)
+# - Provide specific action steps
+# - Keep responses concise (under 100 words)
+# - Frame as opportunities for savings
+
+# ## Key Assumptions
+# - Electricity rate: $0.15/kWh
+# - Solar value: $0.15/kWh avoided cost
+# - Peak hours: 4 PM - 8 PM
+# - High-consumption devices: Heat pump, EV charger, HVAC, Water heater
+
+# ## Critical
+# Never make recommendations without supporting tool data.
+# """
 
 
 # ─────────────────────────────────────────────
 # Response schema (for API layer)
 # ─────────────────────────────────────────────
-class DeviceStatusResponse(BaseModel):
-    """Response model for device status"""
-    device_id: int
-    device_name: str
-    status: str
+class EnergyAnalysisResponse(BaseModel):
+    """Response model for energy analysis"""
+    analysis_type: str
+    findings: Dict[str, Any]
+    recommendations: List[str]
 
 
 # ─────────────────────────────────────────────
-# Agent
+# Energy Advisor Agent
 # ─────────────────────────────────────────────
-class DeviceControlAgent:
+class EnergyAdvisorAgent:
     """
-    90% Agentic Device Control Agent.
+    Production-quality Energy Advisor Agent.
 
-    Nova Lite drives all decision-making through Strands' native tool-calling
-    loop.  Python only:
-      - builds the conversation message list
-      - calls agent()
-      - appends history entries
+    Nova Lite drives all energy analysis and recommendation generation through
+    Strands' native tool-calling loop. Python only handles:
+      - SDK initialization
+      - Conversation memory management
+      - Error handling
     """
 
     def __init__(self):
@@ -110,36 +132,35 @@ class DeviceControlAgent:
 
         self.model_id = settings.bedrock_model_id  # us.amazon.nova-2-lite-v1:0
 
-        # Extended read timeout for multi-step ReAct reasoning chains
+        # Extended read timeout for multi-step energy analysis
         botocore_cfg = BotoCoreConfig(
             read_timeout=300,
             connect_timeout=30,
             retries={"max_attempts": 3},
         )
 
-        # Use BedrockModel with the correct Strands 0.3.0 API
-        # streaming=False -> uses converse (not converse_stream) which is
-        # stable for multi-turn tool-use flows on Nova 2 Lite.
-        # max_tokens=512 reduces throttling on the final synthesis turn.
+        # Use BedrockModel with Strands 0.3.0 API
+        # streaming=False for stable multi-turn tool-use flows
+        # max_tokens=512 for concise, focused responses
         model = BedrockModel(
             model_id=self.model_id,
             region_name=settings.aws_region,
             boto_client_config=botocore_cfg,
             temperature=0.1,  # Reduced from 0.3 for more deterministic responses
             top_p=0.8,       # Reduced from 0.9 for more focused responses
-            max_tokens=200,   # Reduced from 512 to limit response length
+            max_tokens=300,   # Reduced from 512 to limit response length
             streaming=False,
         )
 
-        # Build the Strands Agent with all four device tools
+        # Build the Strands Agent with energy-specific tools
         self.agent = Agent(
             model=model,
             system_prompt=SYSTEM_PROMPT,
             tools=[
-                list_devices_tool,
-                get_device_status_tool,
-                set_device_status_tool,
-                update_multiple_devices_tool,
+                analyze_energy_usage_tool,
+                calculate_cost_analysis_tool,
+                solar_utilization_analysis_tool,
+                budget_monitoring_tool,
             ],
         )
 
@@ -147,8 +168,8 @@ class DeviceControlAgent:
         self.conversation_history: List[Dict[str, Any]] = []
 
         logger.info(
-            "DeviceControlAgent ready | model=%s | tools=[list_devices, "
-            "get_device_status, set_device_status, update_multiple_devices]",
+            "EnergyAdvisorAgent ready | model=%s | tools=[analyze_energy_usage, "
+            "calculate_cost_analysis, solar_utilization_analysis, budget_monitoring]",
             self.model_id,
         )
 
@@ -158,21 +179,20 @@ class DeviceControlAgent:
 
     def process_request(self, user_request: str) -> str:
         """
-        Process a natural-language device-control request.
+        Process an energy advisory request using ReAct pattern.
 
-        The Strands Agent handles the full ReAct loop:
+        The Strands Agent handles the full analysis workflow:
           Reason -> Select tool -> Execute -> Observe -> Reason -> ... -> Respond
 
         Args:
-            user_request: Natural language input from the user.
+            user_request: Natural language energy advisory request.
 
         Returns:
-            Natural language response string.
+            Natural language response with analysis and recommendations.
         """
-        logger.info("User Request: %s", user_request)
+        logger.info("Energy Advisor Request: %s", user_request)
 
         # Build context-enriched message with recent conversation history
-        # so Nova Lite can resolve pronouns and maintain continuity
         context_block = self._format_history_context()
 
         full_message = (
@@ -190,7 +210,7 @@ class DeviceControlAgent:
             }
         )
 
-        # Let Strands / Nova Lite drive the full ReAct loop
+        # Let Strands / Nova Lite drive the full analysis workflow
         try:
             result = self.agent(full_message)
             final_response = self._extract_text(result)
@@ -198,13 +218,13 @@ class DeviceControlAgent:
         except (ClientError, BotoCoreError) as exc:
             logger.error("Bedrock error: %s", exc)
             final_response = (
-                "I encountered an AWS service error while processing your request. "
+                "I encountered an AWS service error while analyzing your energy usage. "
                 "Please check your credentials and try again."
             )
         except Exception as exc:
             logger.error("Agent error: %s", exc, exc_info=True)
             final_response = (
-                "I encountered an unexpected error. "
+                "I encountered an unexpected error while analyzing your energy data. "
                 "Please try again or rephrase your request."
             )
 
@@ -217,13 +237,13 @@ class DeviceControlAgent:
             }
         )
 
-        logger.info("Final Response: %s", final_response)
+        logger.info("Energy Advisor Response: %s", final_response)
         return final_response
 
     def reset_memory(self) -> None:
         """Clear conversation history (useful between sessions)."""
         self.conversation_history.clear()
-        logger.info("Conversation history cleared.")
+        logger.info("Energy advisor conversation history cleared.")
 
     # ──────────────────────────────────────────────────────────────────────
     # Private helpers
@@ -232,23 +252,23 @@ class DeviceControlAgent:
     def _format_history_context(self) -> str:
         """
         Render the last N conversation turns as a compact text block so Nova
-        Lite can use it for pronoun resolution and continuity.
+        Lite can use it for context and continuity in multi-step analysis.
         """
-        # Reduced from 10 to 6 turns to save tokens
-        recent = self.conversation_history[-6:]
+        # Reduced from 8 to 5 turns to save tokens
+        recent = self.conversation_history[-5:]
         if not recent:
             return ""
 
-        lines = ["[Conversation context]"]
+        lines = ["[Previous conversation context]"]
         for turn in recent:
             role = turn["role"].capitalize()
             content = turn["content"]
             if isinstance(content, dict):
                 import json
                 content = json.dumps(content)
-            # More aggressive truncation - reduced from 500 to 250 chars
-            if len(str(content)) > 250:
-                content = str(content)[:250] + "..."
+            # More aggressive truncation - reduced from 400 to 200 chars
+            if len(str(content)) > 200:
+                content = str(content)[:200] + "..."
             lines.append(f"{role}: {content}")
 
         return "\n".join(lines)
@@ -275,23 +295,23 @@ class DeviceControlAgent:
 
         # Direct string conversion fallback
         text = str(result)
-        return text if text and text != "None" else "I completed the request."
+        return text if text and text != "None" else "Energy analysis completed."
 
 
 # ─────────────────────────────────────────────
 # Singleton factory — one agent per process
 # ─────────────────────────────────────────────
-_agent_instance: "DeviceControlAgent | None" = None
+_energy_advisor_instance: "EnergyAdvisorAgent | None" = None
 
 
-def get_device_agent() -> DeviceControlAgent:
+def get_energy_advisor() -> EnergyAdvisorAgent:
     """
-    Return the shared DeviceControlAgent instance.
+    Return the shared EnergyAdvisorAgent instance.
 
     Creates it on first call so that the Strands Agent is initialised once
     and conversation memory persists across requests within the same process.
     """
-    global _agent_instance
-    if _agent_instance is None:
-        _agent_instance = DeviceControlAgent()
-    return _agent_instance
+    global _energy_advisor_instance
+    if _energy_advisor_instance is None:
+        _energy_advisor_instance = EnergyAdvisorAgent()
+    return _energy_advisor_instance
