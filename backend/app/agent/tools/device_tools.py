@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 from pydantic import BaseModel
 from strands import tool
 
-from app.services.device_data_access import get_devices, get_default_power
+from app.agent.device_data_access import get_devices, get_default_power
 
 # ─────────────────────────────────────────────
 # Helpers
