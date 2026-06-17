@@ -57,7 +57,7 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
         >
           <span className="text-sm">
             {activeTab === "chat" 
-              ? (mode === "agent" ? "Controlling device" : "Thinking")
+              ? (mode === "agent" ? "Controlling device" : mode === "energy" ? "Analyzing energy" : "Thinking")
               : "Searching documents"}
           </span>
           <motion.span
