@@ -67,6 +67,10 @@ export const useChatStore = create((set, get) => ({
         // Device Control Agent endpoint
         endpoint = '/api/v1/agent'
         requestBody = { message: question }  // Agent expects {message: "..."}
+      } else if (mode === 'energy') {
+        // Energy Advisor Agent endpoint
+        endpoint = '/api/v1/energy-advisor'
+        requestBody = { message: question }  // Energy advisor expects {message: "..."}
       } else {
         // General chat endpoint
         endpoint = '/api/v1/chat'
@@ -75,8 +79,8 @@ export const useChatStore = create((set, get) => ({
       
       response = await api.post(endpoint, requestBody)
       
-      // Debug: Log the actual response structure
-      console.log(`[DEBUG] Endpoint: ${endpoint}, Response:`, response.data)
+      // Debug: Log the actual response structure with mode info
+      console.log(`[DEBUG] Mode: ${mode}, Endpoint: ${endpoint}, Response:`, response.data)
       
       // Add AI response to appropriate tab
       let answer
@@ -92,6 +96,9 @@ export const useChatStore = create((set, get) => ({
         }
       } else if (mode === 'agent') {
         // Device agent in chat tab
+        answer = response.data.response
+      } else if (mode === 'energy') {
+        // Energy advisor in chat tab
         answer = response.data.response
       } else {
         // Normal chat
