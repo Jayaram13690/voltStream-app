@@ -11,4 +11,6 @@ export const useDeviceStore = create((set, get) => ({
     set({
       devices: get().devices.map((d) => (d.id === id ? { ...d, ...partial } : d)),
     }),
+  
+
 }));

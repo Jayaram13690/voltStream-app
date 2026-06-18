@@ -71,6 +71,10 @@ export const useChatStore = create((set, get) => ({
         // Energy Advisor Agent endpoint
         endpoint = '/api/v1/energy-advisor'
         requestBody = { message: question }  // Energy advisor expects {message: "..."}
+      } else if (mode === 'multi') {
+        // Multi-Agent endpoint
+        endpoint = '/api/v1/multi-agent'
+        requestBody = { query: question }  // Multi-agent expects {query: "..."}
       } else {
         // General chat endpoint
         endpoint = '/api/v1/chat'
@@ -100,6 +104,23 @@ export const useChatStore = create((set, get) => ({
       } else if (mode === 'energy') {
         // Energy advisor in chat tab
         answer = response.data.response
+      } else if (mode === 'multi') {
+        // Multi-agent response
+        answer = response.data.response
+        
+        // Trigger device status update event for multi-agent changes
+        // This ensures frontend gets notified of device changes made by multi-agent
+        if (answer && (answer.includes('turned on') || answer.includes('turned off') || 
+                      answer.includes('updated') || answer.includes('changed'))) {
+          // Dispatch the same event that device agent triggers
+          const event = new CustomEvent('deviceStatusUpdated', {
+            detail: { 
+              timestamp: new Date().toISOString(),
+              source: 'multi_agent'
+            }
+          });
+          window.dispatchEvent(event);
+        }
       } else {
         // Normal chat
         answer = response.data.answer || response.data.response || 'No answer received'
