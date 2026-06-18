@@ -11,7 +11,8 @@ export function ModeSelector({ mode, onModeChange }) {
   const modes = [
     { value: "normal", label: "Normal", description: "General AI assistance" },
     { value: "agent", label: "Device Agent", description: "Control devices" },
-    { value: "energy", label: "Energy Advisor", description: "Energy analysis & savings" }
+    { value: "energy", label: "Energy Advisor", description: "Energy analysis & savings" },
+    { value: "multi", label: "Multi-Agent", description: "Combined device & energy" }
   ];
 
   const currentMode = modes.find(m => m.value === mode) || modes[0];
@@ -24,7 +25,7 @@ export function ModeSelector({ mode, onModeChange }) {
         whileTap={{ scale: 0.95 }}
       >
         <span className="w-2 h-2 rounded-full" style={{
-          backgroundColor: mode === 'agent' ? '#3b82f6' : mode === 'energy' ? '#f59e0b' : '#10b981'
+          backgroundColor: mode === 'agent' ? '#3b82f6' : mode === 'energy' ? '#f59e0b' : mode === 'multi' ? '#8b5cf6' : '#10b981'
         }}></span>
         <span>Mode: {currentMode.label}</span>
         <ChevronDown className="w-4 h-4" />
@@ -49,7 +50,7 @@ export function ModeSelector({ mode, onModeChange }) {
               }`}
             >
               <span className="w-2 h-2 rounded-full" style={{
-                backgroundColor: m.value === 'agent' ? '#3b82f6' : m.value === 'energy' ? '#f59e0b' : '#10b981'
+                backgroundColor: m.value === 'agent' ? '#3b82f6' : m.value === 'energy' ? '#f59e0b' : m.value === 'multi' ? '#8b5cf6' : '#10b981'
               }}></span>
               <div className="flex-1">
                 <div>{m.label}</div>

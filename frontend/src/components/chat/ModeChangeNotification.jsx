@@ -5,7 +5,7 @@ export function ModeChangeNotification({ mode, onDismiss }) {
     <div className="flex items-center gap-2 p-3 bg-vs-primary/5 rounded-lg mx-4 mb-2 border border-vs-primary/20">
       <CheckCircle className="w-4 h-4 text-vs-primary" />
       <span className="text-sm text-vs-primary font-medium">
-        Mode changed: {mode === 'agent' ? 'Device Agent' : mode === 'energy' ? 'Energy Advisor' : 'Normal'}
+        Mode changed: {mode === 'agent' ? 'Device Agent' : mode === 'energy' ? 'Energy Advisor' : mode === 'multi' ? 'Multi-Agent' : 'Normal'}
       </span>
       <button
         onClick={onDismiss}
