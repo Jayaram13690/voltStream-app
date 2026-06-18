@@ -38,6 +38,7 @@ from app.agent.tools.energy_tools import (
     budget_monitoring_tool,
 )
 # from app.core.config import get_settings
+from app.agent.agent_blackboard import get_blackboard
 
 
 # ─────────────────────────────────────────────
@@ -133,6 +134,9 @@ class EnergyAdvisorAgent:
         self.aws_region = "us-east-1"
 
         self.model_id = self.bedrock_model_id  # us.amazon.nova-2-lite-v1:0
+        
+        # Initialize blackboard for multi-agent coordination
+        self.blackboard = get_blackboard()
 
         # Extended read timeout for multi-step energy analysis
         botocore_cfg = BotoCoreConfig(
@@ -240,6 +244,23 @@ class EnergyAdvisorAgent:
         )
 
         logger.info("Energy Advisor Response: %s", final_response)
+        
+        # Update blackboard with energy analysis results
+        self.blackboard.add_action({
+            "type": "energy_agent_response",
+            "query": user_request,
+            "response": final_response,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Also check if we should update energy metrics based on the response
+        # This is a simplified approach - in production you'd parse the response
+        if "savings" in final_response.lower() or "cost" in final_response.lower():
+            self.blackboard.update_energy_metrics({
+                "last_analysis": final_response,
+                "analysis_timestamp": datetime.now().isoformat()
+            })
+        
         return final_response
 
     def reset_memory(self) -> None:
