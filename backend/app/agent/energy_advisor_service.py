@@ -37,7 +37,7 @@ from app.agent.tools.energy_tools import (
     solar_utilization_analysis_tool,
     budget_monitoring_tool,
 )
-from app.core.config import get_settings
+# from app.core.config import get_settings
 
 
 # ─────────────────────────────────────────────
@@ -128,9 +128,11 @@ class EnergyAdvisorAgent:
     """
 
     def __init__(self):
-        settings = get_settings()
+        # settings = get_settings()
+        self.bedrock_model_id = "global.amazon.nova-2-lite-v1:0"
+        self.aws_region = "us-east-1"
 
-        self.model_id = settings.bedrock_model_id  # us.amazon.nova-2-lite-v1:0
+        self.model_id = self.bedrock_model_id  # us.amazon.nova-2-lite-v1:0
 
         # Extended read timeout for multi-step energy analysis
         botocore_cfg = BotoCoreConfig(
@@ -144,7 +146,7 @@ class EnergyAdvisorAgent:
         # max_tokens=512 for concise, focused responses
         model = BedrockModel(
             model_id=self.model_id,
-            region_name=settings.aws_region,
+            region_name=self.aws_region,
             boto_client_config=botocore_cfg,
             temperature=0.1,  # Reduced from 0.3 for more deterministic responses
             top_p=0.8,       # Reduced from 0.9 for more focused responses
