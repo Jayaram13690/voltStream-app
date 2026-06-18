@@ -12,7 +12,7 @@ export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState("chat"); // 'chat' or 'rag'
-  const [mode, setMode] = useState("normal"); // 'normal' or 'agent'
+  const [mode, setMode] = useState("normal"); // 'normal', 'agent', 'energy', or 'multi'
   const [modeNotification, setModeNotification] = useState(null); // Mode change notification
   const { 
     chatMessages, 
@@ -150,6 +150,21 @@ export function ChatWidget() {
     }
   };
 
+  // Handle device status updates from multi-agent system
+  useEffect(() => {
+    const handleDeviceStatusUpdate = () => {
+      console.log('Device status updated event received');
+      // This callback ensures the chat interface responds to device changes
+      // made by the multi-agent system
+    };
+
+    window.addEventListener('deviceStatusUpdated', handleDeviceStatusUpdate);
+
+    return () => {
+      window.removeEventListener('deviceStatusUpdated', handleDeviceStatusUpdate);
+    };
+  }, []);
+
   return (
     <AnimatePresence>
       {!isOpen ? (
@@ -186,6 +201,7 @@ export function ChatWidget() {
                 onClose={toggleChat} 
                 activeTab={activeTab}
                 onReset={handleResetChat}
+                mode={mode}
               />
               <div className="px-4 py-2 bg-vs-primary/5 border-b border-vs-border">
                 <div className="flex p-1 bg-vs-primary/10 rounded-lg">

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { X, Minimize2, RotateCcw } from "lucide-react";
 
-export function ChatHeader({ onMinimize, onClose, activeTab = "chat", onReset }) {
+export function ChatHeader({ onMinimize, onClose, activeTab = "chat", onReset, mode = "normal" }) {
   return (
     <div className="bg-vs-primary text-white p-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -14,10 +14,20 @@ export function ChatHeader({ onMinimize, onClose, activeTab = "chat", onReset })
         </motion.div>
         <div>
           <div className="font-semibold text-sm">
-            {activeTab === "chat" ? "AI Assistant" : "Document Assistant"}
+            {activeTab === "chat" ? 
+              (mode === "normal" ? "AI Assistant" : 
+               mode === "agent" ? "Device Agent" : 
+               mode === "energy" ? "Energy Advisor" : 
+               "Multi-Agent System") : 
+              "Document Assistant"}
           </div>
           <div className="text-xs opacity-80">
-            {activeTab === "chat" ? "Ask general energy-related questions" : "Ask questions from indexed solar energy documents"}
+            {activeTab === "chat" ? 
+              (mode === "normal" ? "Ask general energy-related questions" :
+               mode === "agent" ? "Control smart home devices" :
+               mode === "energy" ? "Energy analysis & savings" :
+               "Combined device & energy control") : 
+              "Ask questions from indexed solar energy documents"}
           </div>
         </div>
       </div>
