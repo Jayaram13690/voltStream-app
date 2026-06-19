@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     aws_region: str  # Load from AWS_REGION environment variable
     bedrock_model_id: str  # Load from BEDROCK_MODEL_ID environment variable
     bedrock_for_config: str  # Load from BEDROCK_FOR_CONFIG environment variable
+    agentcore_runtime_arn: str
 
     @property
     def cors_origin_list(self) -> list[str]:
