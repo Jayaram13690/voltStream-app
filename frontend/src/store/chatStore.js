@@ -36,12 +36,12 @@ export const useChatStore = create((set, get) => ({
   isLoading: false,
   error: null,
   
-  addChatMessage: (role, content, mode = 'normal') => set(state => ({
-    chatMessages: [...state.chatMessages, { role, content, timestamp: new Date(), mode }]
+  addChatMessage: (role, content, mode = 'normal', type = 'normal', sessionId = null, requestId = null) => set(state => ({
+    chatMessages: [...state.chatMessages, { role, content, timestamp: new Date(), mode, type, sessionId, requestId }]
   })),
   
-  addRagMessage: (role, content, mode = 'normal') => set(state => ({
-    ragMessages: [...state.ragMessages, { role, content, timestamp: new Date(), mode }]
+  addRagMessage: (role, content, mode = 'normal', type = 'normal', sessionId = null, requestId = null) => set(state => ({
+    ragMessages: [...state.ragMessages, { role, content, timestamp: new Date(), mode, type, sessionId, requestId }]
   })),
   
   sendMessage: async (question, tab = 'chat', mode = 'normal') => {
@@ -108,6 +108,10 @@ export const useChatStore = create((set, get) => ({
         // Multi-agent response
         answer = response.data.response
         
+        // Extract additional multi-agent fields
+        const sessionId = response.data.session_id
+        const requestId = response.data.request_id
+        
         // Trigger device status update event for multi-agent changes
         // This ensures frontend gets notified of device changes made by multi-agent
         if (answer && (answer.includes('turned on') || answer.includes('turned off') || 
@@ -121,6 +125,16 @@ export const useChatStore = create((set, get) => ({
           });
           window.dispatchEvent(event);
         }
+        
+        // Add AI response with multi-agent details
+        if (tab === 'chat') {
+          get().addChatMessage('ai', answer, mode, 'multi-agent', sessionId, requestId)
+        } else {
+          get().addRagMessage('ai', answer, mode, 'multi-agent', sessionId, requestId)
+        }
+        
+        set({ isLoading: false })
+        return
       } else {
         // Normal chat
         answer = response.data.answer || response.data.response || 'No answer received'
@@ -152,14 +166,17 @@ export const useChatStore = create((set, get) => ({
     } catch (error) {
       console.error('Chat error:', error)
       let errorMessage = 'Failed to get response from the server'
+      let endpoint = null // Declare endpoint variable for error handling
       if (error.response) {
         // Server responded with a status code outside 2xx
         errorMessage = error.response.data.detail || 
                       error.response.data.message || 
                       error.response.data.error || 
                       errorMessage
-        // Add endpoint info for debugging
-        console.error(`Endpoint: ${endpoint}, Status: ${error.response.status}`)
+        // Add endpoint info for debugging (endpoint may not be defined in all cases)
+        if (endpoint) {
+          console.error(`Endpoint: ${endpoint}, Status: ${error.response.status}`)
+        }
         console.error('Response data:', error.response.data)
       } else if (error.request) {
         // Request was made but no response received

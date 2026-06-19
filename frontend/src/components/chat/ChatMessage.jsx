@@ -7,7 +7,7 @@ class ErrorBoundary extends Component {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -63,7 +63,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-export function ChatMessage({ role, content, timestamp, compact = false, activeTab = "chat", mode = "normal" }) {
+export function ChatMessage({ role, content, timestamp, compact = false, activeTab = "chat", mode = "normal", type = "normal", sessionId, requestId }) {
   const isUser = role === 'user'
   
   // Format content with enhanced markdown support
@@ -221,7 +221,7 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
                   <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                     activeTab === "chat" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
                   }`}>
-                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : mode === 'energy' ? "Energy Advisor" : mode == "multi" ? "Multi-Agent" : "Generative AI") : "Document Answer"}
+                    {activeTab === "chat" ? (mode === 'agent' ? "Device Agent" : mode === 'energy' ? "Energy Advisor" : type === "multi-agent" ? "Multi-Agent" : "Generative AI") : "Document Answer"}
                   </span>
                   {mode === 'agent' && content && content.toLowerCase().includes('turned') && (
                     <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 animate-pulse">
@@ -231,6 +231,11 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
                   {mode === 'energy' && content && (content.toLowerCase().includes('$') || content.toLowerCase().includes('savings')) && (
                     <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                       💡 Energy Tip
+                    </span>
+                  )}
+                  {type === "multi-agent" && (
+                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                      🔗 Multi-Agent
                     </span>
                   )}
                 </div>
@@ -246,6 +251,16 @@ export function ChatMessage({ role, content, timestamp, compact = false, activeT
                   isUser ? 'text-white/70' : 'text-vs-muted'
                 )}>
                   {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              )}
+              {type === "multi-agent" && sessionId && (
+                <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                  <span className="px-2 py-1 rounded bg-purple-100 text-purple-700">
+                    🔗 Session: {sessionId}
+                  </span>
+                  <span className="px-2 py-1 rounded bg-blue-100 text-blue-700">
+                    🆔 Request: {requestId}
+                  </span>
                 </div>
               )}
 

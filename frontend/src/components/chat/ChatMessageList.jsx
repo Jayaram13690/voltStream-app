@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChatMessage } from "./ChatMessage";
 import { forwardRef } from "react";
 
-export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeTab = "chat", mode = "normal" }, ref) => {
+const ChatMessageList = forwardRef(({ messages, isLoading, error, activeTab = "chat", mode = "normal" }, ref) => {
   return (
     <div className="p-3 space-y-2">
       <AnimatePresence mode="popLayout" initial={false}>
@@ -35,7 +35,10 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
                 timestamp={message.timestamp}
                 activeTab={activeTab}
                 mode={message.mode || mode}
+                type={message.type || "normal"}
                 compact={true}
+                sessionId={message.sessionId}
+                requestId={message.requestId}
               />
             )}
             {!message.role || !message.content ? (
@@ -91,3 +94,7 @@ export const ChatMessageList = forwardRef(({ messages, isLoading, error, activeT
     </div>
   );
 });
+
+ChatMessageList.displayName = 'ChatMessageList';
+
+export { ChatMessageList };
