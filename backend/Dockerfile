@@ -1,14 +1,15 @@
-FROM python:3.12-slim
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 WORKDIR /app
+
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-COPY requirements.txt .
-COPY .env .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY agentcore-requirements.txt .
+
+RUN pip install --no-cache-dir -r agentcore-requirements.txt
 
 COPY app ./app
+COPY agentcore_agent.py .
 
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "agentcore_agent.py"]
