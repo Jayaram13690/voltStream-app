@@ -9,6 +9,8 @@ venv/
 .venv/
 *.db
 *.zip
+agentcore-venv/
+*.yaml
 
 # Temporary files to ignore
 event.json
