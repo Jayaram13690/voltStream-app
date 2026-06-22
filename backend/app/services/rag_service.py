@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from app.services.embedding_service import EmbeddingService
 from app.services.vector_store_service import VectorStoreService
-from app.services.custom_ragas_evaluation import CustomRagasEvaluationService
+# from app.services.custom_ragas_evaluation import CustomRagasEvaluationService
 from app.services.simple_chat_memory import get_simple_chat_memory
 from app.services.bedrock_service import get_bedrock_service
 
@@ -9,9 +9,9 @@ class RAGService:
     def __init__(self, enable_evaluation: bool = False):
         self.embedding_service = EmbeddingService()
         self.vector_store = VectorStoreService()
-        self.enable_evaluation = enable_evaluation
-        if self.enable_evaluation:
-            self.ragas_evaluator = CustomRagasEvaluationService()
+        # self.enable_evaluation = enable_evaluation
+        # if self.enable_evaluation:
+        #     self.ragas_evaluator = CustomRagasEvaluationService()
         # Initialize simple chat memory for RAG conversation history only
         self.chat_memory = get_simple_chat_memory(max_history=10)
         self.bedrock_service = get_bedrock_service()
@@ -70,12 +70,12 @@ class RAGService:
             STRICT ANSWER (follow all rules above):
             """
 
-    def evaluate_response(self, question: str, answer: str, context: str, ground_truth: Optional[str] = None) -> Dict[str, Any]:
-        """Evaluate a RAG response using RAGAS metrics"""
-        if not self.enable_evaluation or not hasattr(self, 'ragas_evaluator'):
-            return {"error": "Evaluation not enabled"}
+    # def evaluate_response(self, question: str, answer: str, context: str, ground_truth: Optional[str] = None) -> Dict[str, Any]:
+    #     """Evaluate a RAG response using RAGAS metrics"""
+    #     if not self.enable_evaluation or not hasattr(self, 'ragas_evaluator'):
+    #         return {"error": "Evaluation not enabled"}
         
-        return self.ragas_evaluator.evaluate_rag_response(question, answer, context, ground_truth)
+    #     return self.ragas_evaluator.evaluate_rag_response(question, answer, context, ground_truth)
     
     def get_retrieved_context(self, question: str, confidence_threshold: float = 0.4) -> str:
         """Get retrieved context with validation"""

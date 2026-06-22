@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Optional
 from app.services.embedding_service import EmbeddingService
 import boto3
 import json
-from datasets import Dataset
+# from datasets import Dataset
 import logging
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity

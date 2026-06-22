@@ -1,24 +1,51 @@
+from app.core import sqlite_patch
+
+import sqlite3
+
+print("=" * 50)
+print("VECTOR STORE SQLITE VERSION:", sqlite3.sqlite_version)
+print("=" * 50)
+
+
 import chromadb
+import shutil
 from typing import List, Dict, Any
 import os
 
 class VectorStoreService:
     def __init__(self, persist_directory: str = None):
         if persist_directory is None:
+            source_db = "/var/task/app/vector_db/chroma"
+            target_db = "/tmp/chroma"
+
+            # Copy only on cold start
+            if not os.path.exists(target_db):
+                shutil.copytree(source_db, target_db)
+            
+            print("DB COPIED SUCCESSFULLY")
+            print("FILES:", os.listdir(target_db))
+
+            self.persist_directory = target_db
+            print("=" * 60)
+            print("USING CHROMA:", self.persist_directory)
+            print("=" * 60)
             # Use the app's vector_db directory
-            app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            self.persist_directory = os.path.join(app_dir, "vector_db", "chroma")
+            # app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # self.persist_directory = os.path.join(app_dir, "vector_db", "chroma")
         else:
             self.persist_directory = persist_directory
         
         # Ensure the directory exists
-        os.makedirs(self.persist_directory, exist_ok=True)
+        # os.makedirs(self.persist_directory, exist_ok=True)
         
         # Use new ChromaDB client API
         self.client = chromadb.PersistentClient(path=self.persist_directory)
         
         # Create or get collection
         self.collection = self.client.get_or_create_collection(name="energy_documents")
+        print("=" * 60)
+        print("COLLECTION COUNT:", self.collection.count())
+        print("=" * 60)
     
     def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]] = None):
         """Add documents to vector store"""
