@@ -47,3 +47,5 @@ __pycache__/
 
 app/vector_db/
 app/document/*.pdf
+
+*.json
