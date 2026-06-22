@@ -1,15 +1,19 @@
-FROM public.ecr.aws/docker/library/python:3.11-slim
+# FROM public.ecr.aws/lambda/python:3.11
 
-WORKDIR /app
+# COPY requirements.txt ${LAMBDA_TASK_ROOT}/
 
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
+# RUN pip install --no-cache-dir -r requirements.txt
 
-COPY agentcore-requirements.txt .
+# COPY app ${LAMBDA_TASK_ROOT}/app
 
-RUN pip install --no-cache-dir -r agentcore-requirements.txt
+# CMD ["app.main.handler"]
 
-COPY app ./app
-COPY agentcore_agent.py .
+FROM public.ecr.aws/lambda/python:3.11
 
-CMD ["python", "agentcore_agent.py"]
+COPY requirements.txt ${LAMBDA_TASK_ROOT}/
+
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
+
+COPY app ${LAMBDA_TASK_ROOT}/app
+
+CMD ["app.main.handler"]

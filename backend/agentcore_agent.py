@@ -29,9 +29,13 @@ async def invoke(payload):
     coordinator = get_coordinator()
 
     result = coordinator.process_request(query)
-
+    
+    print("response: [VERSION_JUNE21] ")
+    print(result["response"])
+    
     return result
 
+print("AGENTCORE STARTED")
 
 if __name__ == "__main__":
     app.run()
