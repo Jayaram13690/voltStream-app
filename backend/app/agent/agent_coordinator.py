@@ -53,18 +53,31 @@ class AgentCoordinator:
         
         # Device-related keywords - more specific patterns
         device_patterns = [
-            'turn on', 'turn off', 'toggle', 'switch',
-            'ac ', 'heat pump', 'fan ', 'light ', 'device '
+            "device","devices",
+            "status",
+            "turn on",
+            "turn off",
+            "switch",
+            "toggle",
+            "hvac",
+            "heat pump",
+            "ev charger",
+            "charger",
+            "fan",
+            "dishwasher",
+            "water heater",
+            "solar inverter",
+            "kitchen"
         ]
         
         # Energy-related keywords - more specific patterns  
         energy_patterns = [
             'energy ', 'bill ', 'cost ', 'save ', 'optimize ',
-            'solar ', 'budget ', 'consumption ', 'usage '
+            'solar ', 'budget ', 'consumption ', 'usage ', 'impact'
         ]
         
         # Words that suggest combined operations
-        combined_words = ['and ', 'with ', 'also ', 'then ']
+        combined_words = ["save money","energy savings","estimate savings","optimize"]
         
         # Check for device-only requests (more precise matching)
         is_device_only = any(pattern in input_lower for pattern in device_patterns)
@@ -76,18 +89,20 @@ class AgentCoordinator:
         has_combined_words = any(word in input_lower for word in combined_words)
         
         # Improved routing logic
-        if is_device_only and not is_energy_only:
+        if is_device_only and is_energy_only:
+            return 'both'
+        elif is_device_only and has_combined_words:
+            # Default to both for general queries or when unsure
+            return 'both'
+        elif is_device_only:
             return 'device'
-        elif is_energy_only and not is_device_only:
+        elif is_energy_only:
             # For now, keep energy-only requests as energy-only
             # The test case "optimize my house for energy savings" should actually be energy-only
             # since it doesn't mention any specific devices to control
             return 'energy'
-        elif is_device_only and is_energy_only:
-            return 'both'
-        else:
-            # Default to both for general queries or when unsure
-            return 'both'
+        return "device"
+        
     
     def process_request(self, user_input: str) -> Dict[str, Any]:
         """
