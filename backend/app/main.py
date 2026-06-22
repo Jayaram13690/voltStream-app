@@ -1,3 +1,11 @@
+from app.core import sqlite_patch
+
+import sqlite3
+
+print("=" * 50)
+print("MAIN SQLITE VERSION:", sqlite3.sqlite_version)
+print("=" * 50)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,7 +13,12 @@ from app.api.v1 import api_router
 from app.core.config import get_settings
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name)
+app = FastAPI(
+    title=settings.app_name,
+    root_path="/prod",
+    docs_url="/docs",
+    openapi_url="/openapi.json"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,4 +53,12 @@ def health() -> dict[str, str]:
 
 # Lambda handler
 from mangum import Mangum
-handler = Mangum(app)
+class DebugMangum(Mangum):
+    def __call__(self, event, context):
+        print("=" * 80)
+        print("EVENT:")
+        print(event)
+        print("=" * 80)
+        return super().__call__(event, context)
+    
+handler = Mangum(app, api_gateway_base_path="/prod")

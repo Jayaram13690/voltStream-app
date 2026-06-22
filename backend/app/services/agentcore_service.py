@@ -20,6 +20,11 @@ class AgentCoreService:
         )
 
     def invoke(self, query: str):
+        print("=" * 80)
+        print("AGENTCORE INVOKE")
+        print("QUERY:", query)
+        print("RUNTIME ARN:", self.agent_runtime_arn)
+        print("=" * 80)
 
         response = self.client.invoke_agent_runtime(
             agentRuntimeArn=self.agent_runtime_arn,
@@ -31,23 +36,25 @@ class AgentCoreService:
         )
 
         body = response["response"].read()
+        raw_response = body.decode("utf-8")
 
-        result = json.loads(
-            body.decode("utf-8")
-        )
+        print("=" * 80)
+        print("RAW AGENTCORE RESPONSE")
+        print(raw_response)
+        print("=" * 80)
+
+        print("RUNTIME SESSION ID:",
+            response.get("runtimeSessionId"))
+
+        print("REQUEST ID:",
+            response["ResponseMetadata"].get("RequestId"))
+
+        result = json.loads(raw_response)
 
         return {
             "response": result.get("response"),
             "agents_used": result.get("agents_used", []),
             "success": result.get("success", False),
-
-            "session_id": response.get(
-                "runtimeSessionId"
-            ),
-
-            "request_id": response[
-                "ResponseMetadata"
-            ].get(
-                "RequestId"
-            )
+            "session_id": response.get("runtimeSessionId"),
+            "request_id": response["ResponseMetadata"].get("RequestId")
         }
