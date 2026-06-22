@@ -1,0 +1,41 @@
+# Virtual environments
+venv/
+agentcore-venv/
+
+# Python cache
+**/__pycache__/
+**/__pycache__/**
+__pycache__/
+*.pyc
+*.pyo
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Git
+.git/
+.gitignore
+
+# AgentCore local files
+.bedrock_agentcore/
+
+# Build artifacts
+package/
+lambda-package/
+deployment-package.zip
+updated-deployment-package.zip
+
+# IDE
+.vscode/
+.idea/
+
+# Tests
+tests/
+evaluate_ragas.py
+
+# Environment
+.env
+
+# Docker
+Dockerfile.lambda-build
