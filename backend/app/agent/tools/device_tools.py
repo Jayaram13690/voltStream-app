@@ -12,25 +12,26 @@ Tools exposed to Nova Lite:
 """
 
 import logging
-from datetime import datetime
+# from datetime import datetime
 from typing import Any, Dict, List
 
 from pydantic import BaseModel
 from strands import tool
 
-from app.agent.device_data_access import get_devices, get_default_power
+# from app.agent.device_data_access import get_devices, get_default_power
+from app.agent.devices.backend_client import get_devices, update_device
 
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
-_DEFAULT_POWER = get_default_power()
+# _DEFAULT_POWER = get_default_power()
 
 logger = logging.getLogger(__name__)
 
 
-def _get_current_devices() -> list:
-    """Return the live, shared device list."""
-    return get_devices()
+# def _get_current_devices() -> list:
+#     """Return the live, shared device list."""
+#     return get_devices()
 
 
 # ─────────────────────────────────────────────
@@ -66,7 +67,8 @@ def list_devices_tool() -> Dict[str, Any]:
     """
     logger.info("Tool Call: list_devices()")
 
-    current_devices = _get_current_devices()
+    # current_devices = _get_current_devices()
+    current_devices = get_devices()
     devices_list = [
         {
             "device_id": device["id"],
@@ -97,7 +99,8 @@ def get_device_status_tool(device_id: int) -> Dict[str, Any]:
     """
     logger.info(f"Tool Call: get_device_status({device_id})")
 
-    current_devices = _get_current_devices()
+    # current_devices = _get_current_devices()
+    current_devices = get_devices()
     device = next((d for d in current_devices if d["id"] == device_id), None)
 
     if device is None:
@@ -138,7 +141,8 @@ def set_device_status_tool(device_id: int, state: str) -> Dict[str, Any]:
     """
     logger.info(f"Tool Call: set_device_status({device_id}, {state})")
 
-    current_devices = _get_current_devices()
+    # current_devices = _get_current_devices()
+    current_devices = get_devices()
     device = next((d for d in current_devices if d["id"] == device_id), None)
 
     if device is None:
@@ -149,18 +153,30 @@ def set_device_status_tool(device_id: int, state: str) -> Dict[str, Any]:
         }
     else:
         old_status = device["status"]
-        device["status"] = state
-        device["power_usage"] = (
-            _DEFAULT_POWER.get(device["name"], 0.5) if state == "on" else 0.0
-        )
-        device["updated_at"] = datetime.now()
+        # device["status"] = state
+        # device["power_usage"] = (
+        #     _DEFAULT_POWER.get(device["name"], 0.5) if state == "on" else 0.0
+        # )
+        # device["updated_at"] = datetime.now()
+        
+        try:
+            updated_device = update_device(
+                device_id=device_id,
+                status=state
+            )
+        except Exception as e:
+            return {
+                "success": False,
+                "message": str(e),
+                "device_id": device_id
+            }
 
         observation = {
             "success": True,
             "message": f"Device '{device['name']}' (id={device_id}) updated: {old_status} -> {state}",
             "device_id": device_id,
             "old_status": old_status,
-            "new_status": state,
+            "new_status": updated_device["status"],
         }
 
     logger.info(f"Tool Result: {observation}")
@@ -204,7 +220,8 @@ def update_multiple_devices_tool(updates: List[DeviceUpdate]) -> Dict[str, Any]:
     """
     logger.info(f"Tool Call: update_multiple_devices({updates})")
 
-    current_devices = _get_current_devices()
+    # current_devices = _get_current_devices()
+    current_devices = get_devices()
     results = []
 
     for update in updates:
@@ -241,11 +258,23 @@ def update_multiple_devices_tool(updates: List[DeviceUpdate]) -> Dict[str, Any]:
             })
         else:
             old_status = device["status"]
-            device["status"] = state
-            device["power_usage"] = (
-                _DEFAULT_POWER.get(device["name"], 0.5) if state == "on" else 0.0
-            )
-            device["updated_at"] = datetime.now()
+            # device["status"] = state
+            # device["power_usage"] = (
+            #     _DEFAULT_POWER.get(device["name"], 0.5) if state == "on" else 0.0
+            # )
+            # device["updated_at"] = datetime.now()
+            
+            try:
+                updated_device = update_device(
+                    device_id=device_id,
+                    status=state
+                )
+            except Exception as e:
+                return {
+                    "success": False,
+                    "message": str(e),
+                    "device_id": device_id
+                }
 
             results.append({
                 "device_id": device_id,
@@ -253,7 +282,7 @@ def update_multiple_devices_tool(updates: List[DeviceUpdate]) -> Dict[str, Any]:
                 "success": True,
                 "message": f"'{device['name']}' updated: {old_status} -> {state}",
                 "old_status": old_status,
-                "new_status": state,
+                "new_status": updated_device["status"],
             })
 
     succeeded = sum(1 for r in results if r.get("success"))

@@ -6,7 +6,7 @@ from app.schemas.device import DeviceRead, DeviceUpdate
 router = APIRouter(prefix="/devices", tags=["devices"])
 
 # Import shared device data
-from app.agent.device_data_access import get_devices, get_default_power
+from app.api.v1.device_data_access import get_devices, get_default_power
 
 # Get shared device data
 _devices = get_devices()

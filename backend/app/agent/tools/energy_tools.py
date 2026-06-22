@@ -17,7 +17,8 @@ from typing import Any, Dict
 
 from strands import tool
 
-from app.agent.device_data_access import get_devices
+# from app.agent.device_data_access import get_devices
+from app.agent.devices.backend_client import get_devices
 from app.agent.energy_config import energy_simulator, EnergyState
 
 # ─────────────────────────────────────────────
@@ -113,94 +114,93 @@ def _get_analytics_data(period="daily"):
 # ─────────────────────────────────────────────
 # Energy Analysis Tools
 # ─────────────────────────────────────────────
-
 @tool
 def analyze_energy_usage_tool() -> Dict[str, Any]:
     """
     Analyze current energy usage patterns across all devices and live systems.
-    
-    This tool provides a comprehensive breakdown of:
-    - Total current energy consumption (kW)
-    - Consumption by device category
-    - Peak consumption devices
-    - Solar generation vs grid usage
-    - Battery storage status
-    - Efficiency metrics
-    
-    Returns:
-        {
-          "total_consumption": float,          # Total current consumption in kW
-          "solar_generation": float,          # Current solar generation in kW
-          "grid_usage": float,                # Current grid usage in kW
-          "battery_level": int,               # Current battery percentage (0-100)
-          "devices": [                         # Device-specific breakdown
-            {
-              "device_id": int,
-              "device_name": str,
-              "status": str,
-              "power_usage": float,
-              "percentage_of_total": float
-            }
-          ],
-          "peak_devices": [str],              # Names of top 3 consuming devices
-          "efficiency_score": float,           # Overall efficiency (0-100)
-          "savings_potential": float          # Estimated potential savings (%)
-        }
     """
+
     logger.info("Tool Call: analyze_energy_usage()")
-    
-    # Get current data from all sources
+
+    # Get fresh data
     devices = _get_current_devices()
-    live_data = _get_live_energy_data()  # Now returns EnergyState
+    live_data = _get_live_energy_data()
+
+    # Total current consumption
+    total_consumption = sum(
+        device.get("power_usage", 0)
+        for device in devices
+    )
     
-    # Calculate totals
-    total_consumption = sum(device["power_usage"] for device in devices)
-    
-    # Device breakdown with percentages
-    device_breakdown = []
+    active_devices = []
+    inactive_devices = []
+
     for device in devices:
-        if device["power_usage"] > 0:
-            percentage = round((device["power_usage"] / total_consumption * 100) if total_consumption > 0 else 0, 1)
-            device_breakdown.append({
+        if device.get("status") == "on":
+            percentage = round((device.get("power_usage", 0)/ total_consumption* 100) if total_consumption > 0 else 0, 1)
+
+            active_devices.append({
                 "device_id": device["id"],
                 "device_name": device["name"],
                 "status": device["status"],
                 "power_usage": device["power_usage"],
                 "percentage_of_total": percentage
             })
-    
-    # Sort devices by power usage (highest first)
-    device_breakdown.sort(key=lambda x: x["power_usage"], reverse=True)
-    
-    # Identify peak devices (top 3 consumers)
-    peak_devices = [device["device_name"] for device in device_breakdown[:3]]
-    
-    # Calculate efficiency score (simple rule-based)
-    # Efficiency = (solar_generation / total_consumption) * 100, capped at 100
-    solar_ratio = min(1.0, live_data.solar_generation / total_consumption) if total_consumption > 0 else 1.0
-    efficiency_score = round(solar_ratio * 100, 1)
-    
-    # Estimate savings potential (rule-based)
-    # If we have solar but still using grid, there's potential
-    if live_data.solar_generation > 0 and live_data.grid_usage > 0:
-        savings_potential = min(50.0, (live_data.grid_usage / total_consumption * 100) if total_consumption > 0 else 0)
+        else:
+            inactive_devices.append({
+                "device_id": device["id"],
+                "device_name": device["name"],
+                "status": device["status"]
+            })
+    # Sort active devices by power usage
+    active_devices.sort(
+        key=lambda x: x["power_usage"],
+        reverse=True
+    )
+
+    # Top 3 consuming devices
+    peak_devices = [
+        device["device_name"]
+        for device in active_devices[:3]
+    ]
+
+    if total_consumption > 0:
+        solar_ratio = min(
+            1.0,
+            live_data.solar_generation / total_consumption
+        )
     else:
-        savings_potential = 10.0  # Base potential
+        solar_ratio = 1.0
+    efficiency_score = round(
+        solar_ratio * 100,
+        1
+    )
     
+    if (
+        live_data.solar_generation > 0
+        and live_data.grid_usage > 0
+        and total_consumption > 0
+    ):
+        savings_potential = min(50.0,(live_data.grid_usage / total_consumption * 100))
+    else:
+        savings_potential = 10.0
+
     observation = {
         "total_consumption": round(total_consumption, 2),
-        "solar_generation": round(live_data.solar_generation, 2),
-        "grid_usage": round(live_data.grid_usage, 2),
+        "solar_generation": round(live_data.solar_generation,2),
+        "grid_usage": round(live_data.grid_usage,2),
         "battery_level": live_data.battery,
-        "devices": device_breakdown,
+        "active_devices": active_devices,
+        "inactive_devices": inactive_devices,
+        "active_device_count": len(active_devices),
+        "inactive_device_count": len(inactive_devices),
         "peak_devices": peak_devices,
         "efficiency_score": efficiency_score,
-        "savings_potential": round(savings_potential, 1)
+        "savings_potential": round(savings_potential,1)
     }
-    
+
     logger.info(f"Tool Result: {observation}")
     return observation
-
 
 @tool
 def calculate_cost_analysis_tool(period: str = "current") -> Dict[str, Any]:
