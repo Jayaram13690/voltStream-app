@@ -114,16 +114,22 @@ export const useChatStore = create((set, get) => ({
         
         // Trigger device status update event for multi-agent changes
         // This ensures frontend gets notified of device changes made by multi-agent
-        if (answer && (answer.includes('turned on') || answer.includes('turned off') || 
-                      answer.includes('updated') || answer.includes('changed'))) {
+        const deviceKeywords = ['turned on', 'turned off', 'updated', 'changed', 
+                              'switched', 'toggled', 'set to', 'now on', 'now off',
+                              'heat pump', 'ev charger', 'kitchen', 'hvac', 
+                              'water heater', 'solar inverter', 'dishwasher', 'fan'];
+        
+        if (answer && deviceKeywords.some(keyword => answer.toLowerCase().includes(keyword))) {
           // Dispatch the same event that device agent triggers
           const event = new CustomEvent('deviceStatusUpdated', {
             detail: { 
               timestamp: new Date().toISOString(),
-              source: 'multi_agent'
+              source: 'multi_agent',
+              answer: answer
             }
           });
           window.dispatchEvent(event);
+          console.log('[MULTI-AGENT] Dispatched device update event for:', answer);
         }
         
         // Add AI response with multi-agent details
@@ -158,9 +164,13 @@ export const useChatStore = create((set, get) => ({
       if (mode === 'agent') {
         // Dispatch event to notify other components about device changes
         const event = new CustomEvent('deviceStatusUpdated', {
-          detail: { timestamp: new Date().toISOString() }
+          detail: { 
+            timestamp: new Date().toISOString(),
+            source: 'device_agent'
+          }
         })
         window.dispatchEvent(event)
+        console.log('[DEVICE AGENT] Dispatched device update event');
       }
       
     } catch (error) {
