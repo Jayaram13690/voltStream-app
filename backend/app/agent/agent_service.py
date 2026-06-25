@@ -1,6 +1,4 @@
 """
-Device Control Agent Service — 90% Agentic Architecture.
-
 Powered by:
   * Amazon Bedrock  Nova 2 Lite  (us.amazon.nova-2-lite-v1:0)
   * Strands Agents SDK 0.3.0
@@ -117,24 +115,19 @@ class DeviceControlAgent:
         # Initialize blackboard for multi-agent coordination
         self.blackboard = get_blackboard()
 
-        # Extended read timeout for multi-step ReAct reasoning chains
         botocore_cfg = BotoCoreConfig(
             read_timeout=300,
             connect_timeout=30,
             retries={"max_attempts": 3},
         )
 
-        # Use BedrockModel with the correct Strands 0.3.0 API
-        # streaming=False -> uses converse (not converse_stream) which is
-        # stable for multi-turn tool-use flows on Nova 2 Lite.
-        # max_tokens=512 reduces throttling on the final synthesis turn.
         model = BedrockModel(
             model_id=self.model_id,
             region_name=self.aws_region,
             boto_client_config=botocore_cfg,
-            temperature=0.1,  # Reduced from 0.3 for more deterministic responses
-            top_p=0.8,       # Reduced from 0.9 for more focused responses
-            max_tokens=200,   # Reduced from 512 to limit response length
+            temperature=0.1,
+            top_p=0.8,
+            max_tokens=200,
             streaming=False,
         )
 
