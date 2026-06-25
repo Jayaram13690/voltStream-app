@@ -33,18 +33,19 @@ export function DevicesPage() {
 
   // Listen for device status updates from agent operations
   useEffect(() => {
-    const handleDeviceUpdate = () => {
+    const handleDeviceUpdate = async (event) => {
+      console.log('[DEVICE UPDATE] Received from:', event.detail?.source || 'unknown');
+      
       // Refresh devices when agent updates device status
-      (async () => {
-        try {
-          const res = await api.get("/api/v1/devices");
-          setDevices(res.data);
-          // No toast - using inline notification in chat
-        } catch {
-          console.error("Failed to refresh device status");
-          // Silent error handling
-        }
-      })();
+      try {
+        const res = await api.get("/api/v1/devices");
+        setDevices(res.data);
+        console.log('[DEVICE UPDATE] Successfully refreshed', res.data.length, 'devices');
+        // No toast - using inline notification in chat
+      } catch (error) {
+        console.error("Failed to refresh device status:", error);
+        // Silent error handling
+      }
     };
 
     window.addEventListener('deviceStatusUpdated', handleDeviceUpdate);
