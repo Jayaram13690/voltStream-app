@@ -5,26 +5,36 @@ from app.schemas.device import DeviceRead, DeviceUpdate
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
-# Import shared device data
-from app.api.v1.device_data_access import get_devices, get_default_power
+# Import S3 device service
+from app.services.s3_device_service import S3DeviceService
 
-# Get shared device data
-_devices = get_devices()
-_DEFAULT_POWER = get_default_power()
+# Initialize S3 device service
+device_service = S3DeviceService()
 
 
 @router.get("", response_model=list[DeviceRead])
 def list_devices() -> list[DeviceRead]:
-    return [DeviceRead.model_validate(device) for device in _devices]
+    try:
+        devices = device_service.get_devices()
+        return [DeviceRead.model_validate(device) for device in devices]
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.patch("/{device_id}", response_model=DeviceRead)
 def patch_device(device_id: int, body: DeviceUpdate) -> DeviceRead:
-    device = next((d for d in _devices if d["id"] == device_id), None)
-    if device is None:
-        raise HTTPException(status_code=404, detail="Device not found")
-    if body.status is not None:
-        device["status"] = body.status
-        device["power_usage"] = _DEFAULT_POWER.get(device["name"], 0.5) if body.status == "on" else 0.0
-        device["updated_at"] = datetime.now()
-    return DeviceRead.model_validate(device)
+    try:
+        if body.status is not None:
+            device = device_service.update_device(device_id, body.status)
+            return DeviceRead.model_validate(device)
+        else:
+            # If no status provided, just return current device
+            device = device_service.get_device(device_id)
+            if device is None:
+                raise HTTPException(status_code=404, detail="Device not found")
+            return DeviceRead.model_validate(device)
+    except RuntimeError as e:
+        if "not found" in str(e):
+            raise HTTPException(status_code=404, detail="Device not found")
+        else:
+            raise HTTPException(status_code=500, detail=str(e))
