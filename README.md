@@ -1,7 +1,5 @@
 # VoltStream - Prosumer Energy Dashboard
 
-[![VoltStream Logo](https://via.placeholder.com/150)](https://voltstream.example.com)
-
 **VoltStream** is a comprehensive prosumer energy management platform that provides real-time monitoring, analytics, and intelligent device control for residential and small commercial energy systems.
 
 ## 🚀 Features
